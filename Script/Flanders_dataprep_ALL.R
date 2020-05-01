@@ -142,3 +142,11 @@ VABBdata6 <- left_join(VABBdata5, Author_count2, by = "Loi")
 #Omit records with missing fractionalised count
 
 VABBdata7 <- VABBdata6 %>% filter(!is.na(Fract_count))
+
+#Delineate SSH using organisational classification
+
+org_vars_SSH <- names(VABBdata7)[c(16:29, 31:35)] # select org clas vars that refer to SSH; irc(a::irc.85) is ommitted
+notSSH.org <- VABBdata7 %>% filter_at(org_vars_SSH, all_vars(is.na(.)))
+VABBdata7$ORG_SSH <- !(VABBdata7$Loi %in% notSSH.org$Loi)
+
+VABBdata8 <- VABBdata7 %>% filter(VABBdata7$ORG_SSH == TRUE)
