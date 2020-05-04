@@ -89,8 +89,8 @@ VABBjournals_FOS <- All_journals %>% # copy the journal classification data set
   select(-ISSN_NR) 
 
 VABBdata_FOS2 <- left_join(VABBdata_FOS, VABBjournals_FOS, by = "ISSN") %>% # join on ISSN the article and the journal data set
-  distinct(Loi, .keep_all = TRUE) %>% # The join generates more than 2000 duplicates. To check.
   filter(!is.na(VABB.FOS1)) %>% 
+  distinct(Loi, .keep_all = TRUE) %>% # The join generates more than 2000 duplicates. To check.
   select(-ISSN, -ISSN_NR)
 
 VABBdata4 <- left_join(VABBdata3, VABBdata_FOS2, by = "Loi") # join on Loi the classification data set to the main VABB data set
@@ -150,3 +150,34 @@ notSSH.org <- VABBdata7 %>% filter_at(org_vars_SSH, all_vars(is.na(.)))
 VABBdata7$ORG_SSH <- !(VABBdata7$Loi %in% notSSH.org$Loi)
 
 VABBdata8 <- VABBdata7 %>% filter(VABBdata7$ORG_SSH == TRUE)
+
+#Delineate SSH using cognitive classification
+
+cog_vars_SSH.VABB <- paste0("VABB.FOS", 1:5)
+cog_vars_SSH.FOS <- c(paste0("FOS_5_", 1:9),
+                      paste0("FOS_6_", 1:5),
+                      paste0("FOS_6_1_", 1:2),
+                      paste0("FOS_6_2_", 1:2),
+                      paste0("FOS_6_3_", 1:2))
+
+VABBdata8$VABB.cog.SSH <- NA
+for (i in 1:nrow(VABBdata8)) {
+  for (var in cog_vars_SSH.VABB) {
+    if (VABBdata8$VABB.cog.SSH[i] %in% TRUE) {
+      break
+    } else {
+      VABBdata8$VABB.cog.SSH[i] <- VABBdata8[var][i, ] %in% cog_vars_SSH.FOS
+    }
+  }
+}
+
+VABBdata9 <- VABBdata8 %>%
+  filter(VABB.cog.SSH == TRUE)
+
+#Recode VABB.FOS cats
+
+for (var in cog_vars_SSH.VABB) {
+  str_replace_all(var, c("FOS_6_1_1", "FOS_6_1_2"), "FOS_6_1")
+  str_replace_all(var, c("FOS_6_2_1", "FOS_6_2_2"), "FOS_6_2")
+  str_replace_all(var, c("FOS_6_3_1", "FOS_6_3_2"), "FOS_6_3")
+}
