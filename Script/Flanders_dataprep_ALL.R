@@ -1,9 +1,6 @@
 ## call package
 
-library(readr)
-library(dplyr)
-library(stringr)
-library(tidyr)
+library(tidyverse)
 
 # import data
 
@@ -24,6 +21,9 @@ All_journals <- read_csv("./Raw data/Alljournals_09072019_CLEANED.csv", # journa
 VABB_authors<- read_csv("./Raw data/VABB/vabb7authors.csv", # info on authors per Loi
                             col_types = cols(.default = "c"))
 
+# check missing values
+
+colSums(is.na(VABBdata))
 
 # limit the timespan to 2006-2015 and select only journals
 
