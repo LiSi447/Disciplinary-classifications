@@ -21,6 +21,12 @@ All_journals <- read_csv("./Raw data/Alljournals_09072019_CLEANED.csv", # journa
 VABB_authors<- read_csv("./Raw data/VABB/vabb7authors.csv", # info on authors per Loi
                             col_types = cols(.default = "c"))
 
+SCIENCEMETRIXjournals <- read_csv2("N:/ADOC/Dienst Onderzoek/ECOOM/Linda/Study 1 Norway and Flanders/Analysis CLEANED 27112018/Science-Metrix/sm_journal_classification_106_1_corr.csv",
+                                   col_types = cols(.default = "c")) # Science-Metrix classification
+
+SM_crosswalk <- read_csv2("N:/ADOC/Dienst Onderzoek/ECOOM/Linda/Study 1 Norway and Flanders/SM_OECD_crosswalk.csv",
+                          col_types = cols(.default = "c")) #Science-Metrix to OECD FORD cross-walk
+
 # check missing values
 
 colSums(is.na(VABBdata))
@@ -181,3 +187,31 @@ for (var in cog_vars_SSH.VABB) {
   str_replace_all(var, c("FOS_6_2_1", "FOS_6_2_2"), "FOS_6_2")
   str_replace_all(var, c("FOS_6_3_1", "FOS_6_3_2"), "FOS_6_3")
 }
+
+#Add Science-Metrix classification
+
+VABB_ISSNs <- VABBdata9 %>% 
+  select(Loi, ISSN1, ISSN2, ISSN3, ISSN4, ISSN5) %>% 
+  gather(ISSN_nr, ISSN, ISSN1:ISSN5) %>% 
+  distinct(Loi, ISSN, .keep_all = TRUE)
+
+SM_ISSNs <- SCIENCEMETRIXjournals %>% 
+  gather(ISSN_nr, ISSN, issn:essn) %>% 
+  distinct(smsid, ISSN, .keep_all = TRUE) %>% 
+  left_join(SM_crosswalk, by = c("Domain_English", "Field_English", "SubField_English")) %>% 
+  select(ISSN, Domain_English, SubField_English, OECF_FORD_1) %>% 
+  filter(!is.na(ISSN))
+
+names(SM_ISSNs) <- c("ISSN", "SM_TOP", "SM", "SM_OECD")
+
+# ISSNs for the following 7 Loi's appear with 2 different journals  in Science-Metrix classification. I remove these records
+
+LoisRemove <- c("c:vabb:278294", "c:vabb:299627", "c:vabb:317652", "c:vabb:326741", "c:vabb:341235", "c:vabb:345312", "c:vabb:351859")
+
+VABB_SM <- VABB_ISSNs %>% 
+  left_join(SM_ISSNs, by = "ISSN") %>% 
+  filter(!is.na(SM_OECD)) %>% 
+  distinct(Loi, SM_TOP, SM, SM_OECD) %>% 
+  filter(!Loi %in% LoisRemove)
+
+VABBdata10 <- left_join(VABBdata9, VABB_SM, by = "Loi")
