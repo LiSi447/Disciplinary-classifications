@@ -31,7 +31,6 @@ SM_crosswalk <- read_csv2("./Raw data/Science-Metrix/SM_OECD_crosswalk.csv",
 nsd_COMPLETE <- read_csv2("./Raw data/CRISTIN/npu_1_journals.csv",
                           col_types = cols(.default = "c")) # Norwegian classification
 
-
 # Prep VABB data ----------------------------------------------------------
 
 # check missing values
@@ -195,7 +194,8 @@ for (var in cog_vars_SSH.VABB) {
   str_replace_all(var, c("FOS_6_3_1", "FOS_6_3_2"), "FOS_6_3")
 }
 
-# Delineate ISSNs and Loi for adding classifications
+
+# Delineate ISSNs and Loi for adding classifications ----------------------
 
 VABB_ISSNs <- VABBdata9 %>% 
   select(Loi, ISSN1, ISSN2, ISSN3, ISSN4, ISSN5) %>% 
@@ -225,3 +225,62 @@ VABB_SM <- VABB_ISSNs %>%
   filter(!Loi %in% LoisRemove)
 
 VABBdata10 <- left_join(VABBdata9, VABB_SM, by = "Loi")
+
+
+# Add NSD classification --------------------------------------------------
+
+# Recode NSD values
+
+nsd_COMPLETE$NSD.OECD <- fct_collapse(nsd_COMPLETE$`NPI Fagfelt`,
+                                      FOS_1_1 = c("Matematikk"),
+                                      FOS_1_2 = c("Datateknikk og datavitenskap", "Informatikk", "Nett og nettverksfunksjonalitet"),
+                                      FOS_1_3 = c("Fysikk"),
+                                      FOS_1_4 = c("Kjemi"),
+                                      FOS_1_5 = c("Geofag", "Anvendt geologi og petroleumsfag"),
+                                      FOS_1_6 = c("Biologi"),
+                                      FOS_2_0 = c("Bioteknologi", "Generell teknologi", "Tverrfaglig teknologi"), #Bioteknologi does not match this category exactly
+                                      FOS_2_1 = c("Bygg og konstruksjonsteknikk"),
+                                      FOS_2_2 = c("Elkraft og elektrotekniske fag", "Elektronikk og kybernetikk"),
+                                      FOS_2_3 = c("Maskinteknikk", "Energi"),
+                                      FOS_2_4 = c("Kjemisk teknologi"),
+                                      FOS_2_5 = c("Materialteknologi"),
+                                      FOS_2_7 = c("Marin og maritim teknologi", "Miljøteknologi og industriell økologi"),
+                                      FOS_3_0 = c("Tverrfaglig naturvitenskap og medisin"),
+                                      FOS_3_1 = c("Biomedisin", "Farmasi, farmakologi og toksikologi", "Generell medisin"),
+                                      FOS_3_2 = c("Geriatri", "Nevrologi", "Onkologi", "Anestesi, intensiv, akutt", "Gastroenterologi og hepatologi", "Øre-nese-hals", "Psykiatri",
+                                                  "Hjerte, kar og luftveier", "Nefrologi", "Radiologi og billeddiagnostikk", "Endokrinologi", "Infeksjoner", "Odontologi",
+                                                  "Pediatri", "Dermatologi og venerologi", "Hematologi", "Kirurgiske fag" , "Revmatologi" , "Øyesykdommer" ),
+                                      FOS_3_3 = c("Samfunnsmedisin", "Idrettsforskning", "Sykepleie"),
+                                      FOS_4_3 = c("Veterinærmedisin"),
+                                      FOS_5_1 = c("Psykologi"),
+                                      FOS_5_2 = c("Økonomisk-administrative fag", "Samfunnsøkonomi", "Industriell økonomi"),
+                                      FOS_5_3 = c("Pedagogikk og utdanning"),
+                                      FOS_5_4 = c("Kjønnsforskning", "Sosialantropologi", "Sosialforskning", "Sosiologi", "Asiatiske og afrikanske studier"),
+                                      FOS_5_5 = c("Rettsvitenskap"),
+                                      FOS_5_6 = c("Statsvitenskap"),
+                                      FOS_5_7 = c("Geografi"),
+                                      FOS_5_8 = c("Biblioteks- og informasjonsvitenskap", "Medier og kommunikasjon"),
+                                      FOS_5_9 = c("Tverrfaglig samfunnsforskning", "Utviklingsstudier"),
+                                      FOS_6_1 = c("Historie", "Arkeologi og konservering"),
+                                      FOS_6_2 = c("Engelsk", "Gresk og latin", "Lingvistikk", "Litteraturvitenskap",
+                                                  "Nordisk", "Romansk", "Slavisk-baltisk", "Tysk og nederlandsk"),
+                                      FOS_6_3 = c("Filosofi og idéhistorie", "Teologi og religionsvitenskap"),
+                                      FOS_6_4 = c("Arkitektur og design", "Dans", "Kunsthistorie", "Kulturvitenskap",
+                                                  "Musikkvitenskap", "Teatervitenskap og drama"),
+                                      FOS_6_5 = c("Tverrfaglig humanistisk forskning"))
+
+# Above includes only those levels that are identified in VABB data
+
+NSD_mini <- nsd_COMPLETE %>% 
+  select(ISSN1 = `Print ISSN`, ISSN2 = `Online ISSN`, NSD.OECD) %>% 
+  gather(ISSN_nr, ISSN, ISSN1:ISSN2) %>% 
+  filter(!is.na(ISSN)) %>% 
+  select(-ISSN_nr)
+
+VABB_ISSNs_NSD <- left_join(VABB_ISSNs, NSD_mini, by = "ISSN") %>% filter(!is.na(NSD.OECD) & NSD.OECD != "Ikke tildelt") %>% 
+  select(Loi, NSD.OECD) %>% distinct(Loi, .keep_all = TRUE) # removes 20 records %>%
+
+# A number of ISSNs assigned to a single VABB record appear with multiple journals in NSD (that are classified differently)
+# This applies to 20 records;  I use the first classification that is picked up automatically
+
+VABBdata11 <- left_join(VABBdata10, VABB_ISSNs_NSD, by = "Loi") %>% distinct(Loi, .keep_all = TRUE)
