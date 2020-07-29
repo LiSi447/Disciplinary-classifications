@@ -1,8 +1,9 @@
-## call package
+
+# call packages ----------------------------------------------------------
 
 library(tidyverse)
 
-# import data
+# import data -------------------------------------------------------------
 
 VABBdata <- read_csv2(
   "./Raw data/VABB/170523_overzichtsrapport.csv", # complete VABB dataset
@@ -21,11 +22,17 @@ All_journals <- read_csv("./Raw data/Alljournals_09072019_CLEANED.csv", # journa
 VABB_authors<- read_csv("./Raw data/VABB/vabb7authors.csv", # info on authors per Loi
                             col_types = cols(.default = "c"))
 
-SCIENCEMETRIXjournals <- read_csv2("N:/ADOC/Dienst Onderzoek/ECOOM/Linda/Study 1 Norway and Flanders/Analysis CLEANED 27112018/Science-Metrix/sm_journal_classification_106_1_corr.csv",
+SCIENCEMETRIXjournals <- read_csv2("./Raw data/Science-Metrix/sm_journal_classification_106_1_corr.csv",
                                    col_types = cols(.default = "c")) # Science-Metrix classification
 
-SM_crosswalk <- read_csv2("N:/ADOC/Dienst Onderzoek/ECOOM/Linda/Study 1 Norway and Flanders/SM_OECD_crosswalk.csv",
-                          col_types = cols(.default = "c")) #Science-Metrix to OECD FORD cross-walk
+SM_crosswalk <- read_csv2("./Raw data/Science-Metrix/SM_OECD_crosswalk.csv",
+                          col_types = cols(.default = "c")) # Science-Metrix to OECD FORD cross-walk
+
+nsd_COMPLETE <- read_csv2("./Raw data/CRISTIN/npu_1_journals.csv",
+                          col_types = cols(.default = "c")) # Norwegian classification
+
+
+# Prep VABB data ----------------------------------------------------------
 
 # check missing values
 
@@ -188,12 +195,15 @@ for (var in cog_vars_SSH.VABB) {
   str_replace_all(var, c("FOS_6_3_1", "FOS_6_3_2"), "FOS_6_3")
 }
 
-#Add Science-Metrix classification
+# Delineate ISSNs and Loi for adding classifications
 
 VABB_ISSNs <- VABBdata9 %>% 
   select(Loi, ISSN1, ISSN2, ISSN3, ISSN4, ISSN5) %>% 
   gather(ISSN_nr, ISSN, ISSN1:ISSN5) %>% 
   distinct(Loi, ISSN, .keep_all = TRUE)
+
+
+# Add Science-Metrix classification ---------------------------------------
 
 SM_ISSNs <- SCIENCEMETRIXjournals %>% 
   gather(ISSN_nr, ISSN, issn:essn) %>% 
