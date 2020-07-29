@@ -31,6 +31,8 @@ SM_crosswalk <- read_csv2("./Raw data/Science-Metrix/SM_OECD_crosswalk.csv",
 nsd_COMPLETE <- read_csv2("./Raw data/CRISTIN/npu_1_journals.csv",
                           col_types = cols(.default = "c")) # Norwegian classification
 
+erih <- read_csv2("./Raw data/ERIH PLUS/2020-04-03 ERIH PLUS approved journals and series.csv")
+
 # Prep VABB data ----------------------------------------------------------
 
 # check missing values
@@ -284,3 +286,62 @@ VABB_ISSNs_NSD <- left_join(VABB_ISSNs, NSD_mini, by = "ISSN") %>% filter(!is.na
 # This applies to 20 records;  I use the first classification that is picked up automatically
 
 VABBdata11 <- left_join(VABBdata10, VABB_ISSNs_NSD, by = "Loi") %>% distinct(Loi, .keep_all = TRUE)
+
+
+# Add ERIH PLUS classification --------------------------------------------
+
+# Clean up ERIH PLUS codes
+
+erih.wip <- erih %>% 
+  select(`NSD Journal ID`, erih.OECD = `OECD classifications`) %>% 
+  separate(erih.OECD, paste0("erih.oecd",1:14), sep = "; ") %>% 
+  gather(d.nr, erih.oecd, erih.oecd1:erih.oecd14) %>% 
+  filter(!is.na(erih.oecd)) %>% 
+  mutate(
+    erih.oecd = as.factor(str_replace(erih.oecd, " \\(.+\\)", ""))
+  ) %>% 
+  select(-d.nr)
+
+erih.disc <- erih.wip %>% count(erih.oecd)
+
+erih.wip$erih.oecd <- fct_collapse(erih.wip$erih.oecd,
+                                   FOS_5_1 = c("Psychology"),
+                                   FOS_5_2 = c("Economics and Business"),
+                                   FOS_5_3 = c("Educational Sciences"),
+                                   FOS_5_4 = c("Sociology"),
+                                   FOS_5_5 = c("Law"),
+                                   FOS_5_6 = c("Political Science"),
+                                   FOS_5_7 = c("Social and Economic Geography"),
+                                   FOS_5_8 = c("Media and Communications"),
+                                   FOS_5_9 = c("Other Social Sciences"),
+                                   FOS_6_1 = c("History and Archaeology"),
+                                   FOS_6_2 = c("Languages and Literature"),
+                                   FOS_6_3 = c("Philosophy, Ethics and Religion"),
+                                   FOS_6_4 = c("Arts"),
+                                   FOS_6_5 = c("Other Humanities"))
+
+erih <- left_join(erih, erih.wip, by = "NSD Journal ID")
+
+# Prep erih
+
+erih.ISSNs <- erih %>% 
+  select(`NSD Journal ID`, `Print ISSN`, `Online ISSN`, erih.oecd) %>% 
+  gather(ISSN_nr, ISSN, `Print ISSN`:`Online ISSN`) %>% 
+  filter(!is.na(ISSN)) %>% 
+  select(-ISSN_nr) %>% 
+  distinct(`NSD Journal ID`, ISSN, erih.oecd)
+
+# Add to VABB data
+
+VABB_ISSNs_erih <- left_join(VABB_ISSNs, erih.ISSNs, by = "ISSN") %>% 
+  filter(!is.na(erih.oecd)) %>% 
+  distinct(Loi, erih.oecd, .keep_all = TRUE) %>% 
+  select(Loi, erih.oecd, `NSD Journal ID`) %>% 
+  group_by(Loi) %>% 
+  mutate(count.Loi = row_number()) %>% 
+  ungroup() %>% 
+  spread(count.Loi, erih.oecd)
+
+names(VABB_ISSNs_erih) <- c("Loi", "NSD Journal ID", paste0("erih.oecd", 1:13))
+
+VABBdata12 <- left_join(VABBdata11, VABB_ISSNs_erih, by = "Loi")
