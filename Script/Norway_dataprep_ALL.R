@@ -16,6 +16,24 @@ SCIENCEMETRIXjournals <- read_csv2("./Raw data/Science-Metrix/sm_journal_classif
 SM_crosswalk <- read_csv2("./Raw data/Science-Metrix/SM_OECD_crosswalk.csv",
                           col_types = cols(.default = "c")) # Science-Metrix to OECD FORD cross-walk
 
+NORWAYdataWOS <- read_csv("./Raw data/Web of Science - KUL/Norway_201807231548.csv")
+
+WOS_SCIE <- read_csv2("./Raw data/Web of Science - online/SCIE2018.csv",
+                      col_types = cols(.default = "c")) # SCIE journal list extracted from pdf
+WOS_SSCI <- read_csv2("./Raw data/Web of Science - online/SSCI2018.csv",
+                      col_types = cols(.default = "c")) # SSCI journal list extracted from pdf
+WOS_AHCI <- read_csv2("./Raw data/Web of Science - online/AHCI2018.csv",
+                      col_types = cols(.default = "c")) # AHCI journal list extracted from pdf
+
+NORWAYpairs <- read_delim("./Raw data/Web of Science - matching/matching-pairs-NO-fullref-topk-256perms.csv",
+                            col_types = list("jaccard" = col_double()),
+                            delim = ",")
+
+MANUALPAIRS <- read_csv2("./Raw data/Web of Science - matching/NO_WOSCRISTIN_MANUALPAIRS_19112018.CSV")
+
+WOSdata <- read_csv("./Raw data/Web of Science - online/WOSdata_17012019.csv",
+                    col_types = list("WOS_UT_FINAL" = col_character()))
+
 # prep CRISTIN data -------------------------------------------------------
 
 # Adjust column names
@@ -172,4 +190,177 @@ CRISTIN_SM <- CRISTIN_ISSNs %>%
   left_join(SM_ISSNs, by = "ISSN") %>% 
   filter(!is.na(SM_OECD)) %>% 
   distinct(VARBEIDLOPENR, SM_TOP, SM, SM_OECD)
+
 CRISTINdata.09 <- left_join(CRISTINdata.08, CRISTIN_SM, by = "VARBEIDLOPENR")
+
+# Add WoS classification --------------------------------------------------
+
+NORWAYdata <- CRISTINdata.09
+
+# Prep CRISTIN data
+
+NORWAYdata <- NORWAYdata %>% 
+  mutate(
+    bp_CLEANED = as.integer(str_replace_all(NORWAYdata$SIDENR_FRA, "[:alpha:]|[:punct:]|[:space:]", "")),
+    ep_CLEANED = as.integer(str_replace_all(NORWAYdata$SIDENR_TIL, "[:alpha:]|[:punct:]|[:space:]", "")),
+    title_CLEANED = tolower(str_replace_all(NORWAYdata$TITTELTEKST_ORIGINAL, "[:punct:]", ""))
+  )
+
+# Prepare WOS data
+
+NORWAYdataWOS <- NORWAYdataWOS %>% 
+  mutate(
+    bp_CLEANED = as.integer(str_replace_all(NORWAYdataWOS$BEGINPAGINA, "[:alpha:]|[:punct:]|[:space:]", "")),
+    ep_CLEANED = as.integer(str_replace_all(NORWAYdataWOS$EINDPAGINA, "[:alpha:]|[:punct:]|[:space:]", "")),
+    title_CLEANED = tolower(str_replace_all(NORWAYdataWOS$TITEL, "[:punct:]", "")),
+    first.author = str_replace(str_extract(NORWAYdataWOS$AUTEUR, "[:graph:]*"), ",$", "")
+  )
+
+# Add additional ISSNs from WoS journal lists in WOS data
+
+NORWAYdataWOS$print.ISSN_1 <- ifelse(NORWAYdataWOS$ISSN %in% WOS_SCIE$ISSN, WOS_SCIE$ISSN[match(NORWAYdataWOS$ISSN, WOS_SCIE$ISSN)], NA)
+NORWAYdataWOS$print.ISSN_2 <- ifelse(NORWAYdataWOS$ISSN %in% WOS_SSCI$ISSN, WOS_SSCI$ISSN[match(NORWAYdataWOS$ISSN, WOS_SSCI$ISSN)], NA)
+NORWAYdataWOS$print.ISSN_3 <- ifelse(NORWAYdataWOS$ISSN %in% WOS_AHCI$ISSN, WOS_AHCI$ISSN[match(NORWAYdataWOS$ISSN, WOS_AHCI$ISSN)], NA)
+NORWAYdataWOS$print.ISSN <- ifelse(!is.na(NORWAYdataWOS$print.ISSN_1), paste(NORWAYdataWOS$print.ISSN_1),
+                                   ifelse(!is.na(NORWAYdataWOS$print.ISSN_2), paste(NORWAYdataWOS$print.ISSN_2),
+                                          ifelse(!is.na(NORWAYdataWOS$print.ISSN_3), paste(NORWAYdataWOS$print.ISSN_3),
+                                                 NA)))
+NORWAYdataWOS$online.ISSN_1 <- ifelse(NORWAYdataWOS$ISSN %in% WOS_SCIE$`E-ISSN`, WOS_SCIE$`E-ISSN`[match(NORWAYdataWOS$ISSN, WOS_SCIE$`E-ISSN`)], NA)
+NORWAYdataWOS$online.ISSN_2 <- ifelse(NORWAYdataWOS$ISSN %in% WOS_SSCI$`E-ISSN`, WOS_SSCI$`E-ISSN`[match(NORWAYdataWOS$ISSN, WOS_SSCI$`E-ISSN`)], NA)
+NORWAYdataWOS$online.ISSN_3 <- ifelse(NORWAYdataWOS$ISSN %in% WOS_AHCI$`E-ISSN`, WOS_AHCI$`E-ISSN`[match(NORWAYdataWOS$ISSN, WOS_AHCI$`E-ISSN`)], NA)
+NORWAYdataWOS$online.ISSN <- ifelse(!is.na(NORWAYdataWOS$online.ISSN_1), paste(NORWAYdataWOS$online.ISSN_1),
+                                    ifelse(!is.na(NORWAYdataWOS$online.ISSN_2), paste(NORWAYdataWOS$online.ISSN_2),
+                                           ifelse(!is.na(NORWAYdataWOS$online.ISSN_3), paste(NORWAYdataWOS$online.ISSN_3),
+                                                  NA)))
+
+# Create a smaller file with only necessary vars
+
+NORWAYdataMINI <- NORWAYdata %>% 
+  select("VARBEIDLOPENR", "TITTELTEKST_ORIGINAL", "title_CLEANED", "SIDENR_FRA","SIDENR_TIL", "bp_CLEANED", "ep_CLEANED", "ARSTALL","KILDEKODE","KILDEPOSTID",
+         "JOURNALNAVN", "ISSN","ISSN_ELEKTRONISK","SPRAKKODE_ORIGINAL", "first.author")
+
+# Add the file with LSH results
+
+names(NORWAYpairs)[1] <- "VARBEIDLOPENR"
+NORWAYdataMINI.v2 <- left_join(NORWAYdataMINI, NORWAYpairs, by = "VARBEIDLOPENR")
+
+# Check for similarity
+NORWAYdataMINI.v2 <- NORWAYdataMINI.v2 %>% 
+  mutate(
+    check.year = ifelse(!is.na(NORWAYdataMINI.v2$ARSTALL),
+                        NORWAYdataMINI.v2$ARSTALL - NORWAYdataWOS$PUBJAAR[match(NORWAYdataMINI.v2$wos_id, NORWAYdataWOS$PUBID)],
+                        NA),
+    check.bp = ifelse(!is.na(NORWAYdataMINI.v2$bp_CLEANED),
+                      NORWAYdataMINI.v2$bp_CLEANED - NORWAYdataWOS$bp_CLEANED[match(NORWAYdataMINI.v2$wos_id, NORWAYdataWOS$PUBID)],
+                      NA),
+    check.ep = ifelse(!is.na(NORWAYdataMINI.v2$ep_CLEANED),
+                      NORWAYdataMINI.v2$ep_CLEANED - NORWAYdataWOS$ep_CLEANED[match(NORWAYdataMINI.v2$wos_id, NORWAYdataWOS$PUBID)],
+                      NA),
+    check.authors = ifelse(!is.na(NORWAYdataMINI.v2$first.author),
+                           stringdist(NORWAYdataMINI.v2$first.author, NORWAYdataWOS$first.author[match(NORWAYdataMINI.v2$wos_id, NORWAYdataWOS$PUBID)],
+                                      method = "lv"),
+                           NA),
+    check.ISSN_1 = ifelse(!is.na(NORWAYdataMINI.v2$ISSN),
+                          stringdist(NORWAYdataMINI.v2$ISSN,
+                                     NORWAYdataWOS$ISSN[match(NORWAYdataMINI.v2$wos_id, NORWAYdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_2 = ifelse(!is.na(NORWAYdataMINI.v2$ISSN),
+                          stringdist(NORWAYdataMINI.v2$ISSN,
+                                     NORWAYdataWOS$print.ISSN[match(NORWAYdataMINI.v2$wos_id, NORWAYdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_3 = ifelse(!is.na(NORWAYdataMINI.v2$ISSN),
+                          stringdist(NORWAYdataMINI.v2$ISSN,
+                                     NORWAYdataWOS$online.ISSN[match(NORWAYdataMINI.v2$wos_id, NORWAYdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_4 = ifelse(!is.na(NORWAYdataMINI.v2$ISSN_ELEKTRONISK),
+                          stringdist(NORWAYdataMINI.v2$ISSN_ELEKTRONISK,
+                                     NORWAYdataWOS$ISSN[match(NORWAYdataMINI.v2$wos_id, NORWAYdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_5 = ifelse(!is.na(NORWAYdataMINI.v2$ISSN_ELEKTRONISK),
+                          stringdist(NORWAYdataMINI.v2$ISSN_ELEKTRONISK,
+                                     NORWAYdataWOS$print.ISSN[match(NORWAYdataMINI.v2$wos_id, NORWAYdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_6 = ifelse(!is.na(NORWAYdataMINI.v2$ISSN_ELEKTRONISK),
+                          stringdist(NORWAYdataMINI.v2$ISSN_ELEKTRONISK,
+                                     NORWAYdataWOS$online.ISSN[match(NORWAYdataMINI.v2$wos_id, NORWAYdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA)
+  )
+#
+
+#exact matches title_matchCHECK == TRUE
+NORWAYdataMINI.v2$title_match <- NORWAYdataWOS$PUBID[match(NORWAYdataMINI.v2$title_CLEANED, NORWAYdataWOS$title_CLEANED)]
+NORWAYdataMINI.v2$title_matchCHECK <- ifelse(!is.na(NORWAYdataMINI.v2$title_match), 
+                                             ifelse(NORWAYdataMINI.v2$ARSTALL == NORWAYdataWOS$PUBJAAR[match(NORWAYdataMINI.v2$title_match, NORWAYdataWOS$PUBID)],
+                                                    ifelse(NORWAYdataMINI.v2$bp_CLEANED == NORWAYdataWOS$bp_CLEANED[match(NORWAYdataMINI.v2$title_match, NORWAYdataWOS$PUBID)],
+                                                           ifelse(NORWAYdataMINI.v2$ep_CLEANED == NORWAYdataWOS$ep_CLEANED[match(NORWAYdataMINI.v2$title_match, NORWAYdataWOS$PUBID)],
+                                                                  TRUE, FALSE),
+                                                           FALSE),
+                                                    FALSE),
+                                             NA)
+#rule 1 rule1.ID == "YES"
+test.rule1 <- NORWAYdataMINI.v2 %>% 
+  filter(jaccard >= 0.75 & (check.year >= -2 & check.year <= 1) & (check.bp == 0|check.ep == 0))
+NORWAYdataMINI.v2 <- NORWAYdataMINI.v2 %>% 
+  mutate(
+    rule1.ID = ifelse(NORWAYdataMINI.v2$VARBEIDLOPENR %in% test.rule1$VARBEIDLOPENR, "YES", "NO") 
+  )
+
+#rule 2 rule2.ID == "YES"
+test.rule2 <- NORWAYdataMINI.v2 %>% 
+  filter(jaccard >= 0.30 & (check.year >= -2 & check.year <= 1) & (check.bp == 0|check.ep == 0) &
+           (check.ISSN_1 == 0|check.ISSN_2==0|check.ISSN_3==0|check.ISSN_4==0|check.ISSN_5==0
+            |check.ISSN_6==0) &
+           check.authors <= 2)
+NORWAYdataMINI.v2 <- NORWAYdataMINI.v2 %>% 
+  mutate(
+    rule2.ID = ifelse(NORWAYdataMINI.v2$VARBEIDLOPENR %in% test.rule2$VARBEIDLOPENR, "YES", "NO") 
+  )
+
+#rule 3 rule3.ID == "YES"
+test.rule3 <- NORWAYdataMINI.v2 %>% 
+  filter(jaccard >= 0.65 & (check.year >= -2 & check.year <= 1) &
+           (check.ISSN_1 == 0|check.ISSN_2==0|check.ISSN_3==0|check.ISSN_4==0|check.ISSN_5==0
+            |check.ISSN_6==0))
+NORWAYdataMINI.v2 <- NORWAYdataMINI.v2 %>% 
+  mutate(
+    rule3.ID = ifelse(NORWAYdataMINI.v2$VARBEIDLOPENR %in% test.rule3$VARBEIDLOPENR, "YES", "NO") 
+  )
+
+#manual matching !is.na(WOSID) 
+NORWAYdataMINI.v2 <- left_join(NORWAYdataMINI.v2, MANUALPAIRS, by = "VARBEIDLOPENR")
+
+#combine
+NORWAYdataMINI.v2$indexed.WOS1 <- ifelse(NORWAYdataMINI.v2$title_matchCHECK == TRUE, TRUE,
+                                         ifelse(NORWAYdataMINI.v2$rule1.ID == "YES", TRUE,
+                                                ifelse(NORWAYdataMINI.v2$rule2.ID == "YES", TRUE,
+                                                       ifelse(NORWAYdataMINI.v2$rule3.ID == "YES", TRUE,
+                                                              ifelse(!is.na(NORWAYdataMINI.v2$WOSID), TRUE,
+                                                                     FALSE)))))
+NORWAYdataMINI.v2$indexed.WOS2 <- ifelse(is.na(NORWAYdataMINI.v2$title_matchCHECK)&NORWAYdataMINI.v2$rule1.ID == "YES", TRUE,
+                                         ifelse(NORWAYdataMINI.v2$rule2.ID == "YES", TRUE,
+                                                ifelse(NORWAYdataMINI.v2$rule3.ID == "YES", TRUE,
+                                                       ifelse(!is.na(NORWAYdataMINI.v2$WOSID), TRUE,
+                                                              FALSE))))
+NORWAYdataMINI.v2$indexed.WOS_FIN <- ifelse(NORWAYdataMINI.v2$indexed.WOS1 == TRUE|NORWAYdataMINI.v2$indexed.WOS2 == TRUE, TRUE, FALSE)
+
+# Add WOS IDs
+NORWAYdataMINI.v2$WOS_UT_01 <- ifelse(NORWAYdataMINI.v2$title_matchCHECK == TRUE, NORWAYdataMINI.v2$title_match, NA)
+NORWAYdataMINI.v2$WOS_UT_02 <- ifelse(NORWAYdataMINI.v2$rule1.ID == "YES"|NORWAYdataMINI.v2$rule2.ID == "YES"|NORWAYdataMINI.v2$rule3.ID == "YES",
+                                      NORWAYdataMINI.v2$wos_id, NA)
+NORWAYdataMINI.v2$WOS_UT_03 <- ifelse(!is.na(NORWAYdataMINI.v2$WOSID), NORWAYdataMINI.v2$WOSID, NA)
+NORWAYdataMINI.v2$WOS_UT_FINAL <- ifelse(!is.na(NORWAYdataMINI.v2$WOS_UT_01), NORWAYdataMINI.v2$WOS_UT_01,
+                                         ifelse(!is.na(NORWAYdataMINI.v2$WOS_UT_02), NORWAYdataMINI.v2$WOS_UT_02,
+                                                ifelse(!is.na(NORWAYdataMINI.v2$WOS_UT_03), NORWAYdataMINI.v2$WOS_UT_03,
+                                                       NA)))
+
+# Add WOS classification
+NORWAYdata_WOS <- left_join(NORWAYdataMINI.v2, WOSdata, by = "WOS_UT_FINAL")
+NORWAYdata_WOS <- NORWAYdata_WOS %>% distinct(VARBEIDLOPENR, .keep_all = TRUE)
+
+CRISTINdata.10 <- left_join(CRISTINdata.09, NORWAYdata_WOS, by = "VARBEIDLOPENR")
