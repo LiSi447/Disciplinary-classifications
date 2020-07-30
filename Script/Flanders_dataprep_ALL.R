@@ -2,6 +2,7 @@
 # call packages ----------------------------------------------------------
 
 library(tidyverse)
+library(stringdist)
 
 # import data -------------------------------------------------------------
 
@@ -32,6 +33,29 @@ nsd_COMPLETE <- read_csv2("./Raw data/CRISTIN/npu_1_journals.csv",
                           col_types = cols(.default = "c")) # Norwegian classification
 
 erih <- read_csv2("./Raw data/ERIH PLUS/2020-04-03 ERIH PLUS approved journals and series.csv")
+
+VABBdata_authors<- read_csv("./Raw data/VABB/vabb7authors.csv",
+                            col_types = cols(.default = "c")) # data on VABB authors for each Loi
+
+FLANDERSdataWOS <- read_csv("./Raw data/Web of Science - KUL/Belgium_201807232032.csv",
+                            col_types = cols(.default = "c")) # WoS data on Belgium retrieved from the KUL database
+
+WOS_SCIE <- read_csv2("./Raw data/Web of Science - online/SCIE2018.csv",
+                      col_types = cols(.default = "c")) # SCIE journal list extracted from pdf
+WOS_SSCI <- read_csv2("./Raw data/Web of Science - online/SSCI2018.csv",
+                      col_types = cols(.default = "c")) # SSCI journal list extracted from pdf
+WOS_AHCI <- read_csv2("./Raw data/Web of Science - online/AHCI2018.csv",
+                      col_types = cols(.default = "c")) # AHCI journal list extracted from pdf
+
+FLANDERSpairs <- read_delim("./Raw data/Web of Science - matching/matching-pairs-fullref-topk-256perms.csv",
+                            col_types = list("jaccard" = col_double()),
+                            delim = ",")
+
+FLANDERS_MANUALPAIRS <- read_csv2("./Raw data/Web of Science - matching/FLANDERS_VABBWOS_MANUALMATCH_15112018.csv",
+                                  col_types = cols(.default = "c"))
+
+WOSdata <- read_csv("./Raw data/Web of Science - online/WOSdata_17012019.csv",
+                    col_types = cols(.default = "c")) # WoS data retrieved online using WoS ID
 
 # Prep VABB data ----------------------------------------------------------
 
@@ -345,3 +369,222 @@ VABB_ISSNs_erih <- left_join(VABB_ISSNs, erih.ISSNs, by = "ISSN") %>%
 names(VABB_ISSNs_erih) <- c("Loi", "NSD Journal ID", paste0("erih.oecd", 1:13))
 
 VABBdata12 <- left_join(VABBdata11, VABB_ISSNs_erih, by = "Loi")
+
+# Add WoS classification --------------------------------------------------
+
+FLANDERSdata <- VABBdata12
+
+# Prep VABB data
+FLANDERSdata <- FLANDERSdata %>% 
+  mutate(
+    bp_CLEANED = as.integer(str_replace_all(FLANDERSdata$bp, "[:alpha:]|[:punct:]|[:space:]", "")),
+    ep_CLEANED = as.integer(str_replace_all(FLANDERSdata$ep, "[:alpha:]|[:punct:]|[:space:]", "")),
+    title_CLEANED = tolower(str_replace_all(FLANDERSdata$ctitle, "[:punct:]", "")),
+    author_list = VABBdata_authors$authors[match(FLANDERSdata$Loi, VABBdata_authors$Loi)],
+    first.author = str_replace(str_extract(author_list, "[:graph:]*"), ",$" , "")
+  )
+
+# Prep WOS data
+FLANDERSdataWOS <- FLANDERSdataWOS %>% 
+  mutate(
+    bp_CLEANED = as.integer(str_replace_all(FLANDERSdataWOS$BEGINPAGINA, "[:alpha:]|[:punct:]|[:space:]", "")),
+    ep_CLEANED = as.integer(str_replace_all(FLANDERSdataWOS$EINDPAGINA, "[:alpha:]|[:punct:]|[:space:]", "")),
+    title_CLEANED = tolower(str_replace_all(FLANDERSdataWOS$TITEL, "[:punct:]", "")),
+    first.author = str_replace(str_extract(FLANDERSdataWOS$AUTEUR, "[:graph:]*"), ",$", "")
+  )
+
+# Add additional ISSNs from WoS journal lists in WOS data
+FLANDERSdataWOS$print.ISSN_1 <- ifelse(FLANDERSdataWOS$ISSN %in% WOS_SCIE$ISSN, WOS_SCIE$ISSN[match(FLANDERSdataWOS$ISSN, WOS_SCIE$ISSN)], NA)
+FLANDERSdataWOS$print.ISSN_2 <- ifelse(FLANDERSdataWOS$ISSN %in% WOS_SSCI$ISSN, WOS_SSCI$ISSN[match(FLANDERSdataWOS$ISSN, WOS_SSCI$ISSN)], NA)
+FLANDERSdataWOS$print.ISSN_3 <- ifelse(FLANDERSdataWOS$ISSN %in% WOS_AHCI$ISSN, WOS_AHCI$ISSN[match(FLANDERSdataWOS$ISSN, WOS_AHCI$ISSN)], NA)
+FLANDERSdataWOS$print.ISSN <- ifelse(!is.na(FLANDERSdataWOS$print.ISSN_1), paste(FLANDERSdataWOS$print.ISSN_1),
+                                     ifelse(!is.na(FLANDERSdataWOS$print.ISSN_2), paste(FLANDERSdataWOS$print.ISSN_2),
+                                            ifelse(!is.na(FLANDERSdataWOS$print.ISSN_3), paste(FLANDERSdataWOS$print.ISSN_3),
+                                                   NA)))
+FLANDERSdataWOS$online.ISSN_1 <- ifelse(FLANDERSdataWOS$ISSN %in% WOS_SCIE$`E-ISSN`, WOS_SCIE$`E-ISSN`[match(FLANDERSdataWOS$ISSN, WOS_SCIE$`E-ISSN`)], NA)
+FLANDERSdataWOS$online.ISSN_2 <- ifelse(FLANDERSdataWOS$ISSN %in% WOS_SSCI$`E-ISSN`, WOS_SSCI$`E-ISSN`[match(FLANDERSdataWOS$ISSN, WOS_SSCI$`E-ISSN`)], NA)
+FLANDERSdataWOS$online.ISSN_3 <- ifelse(FLANDERSdataWOS$ISSN %in% WOS_AHCI$`E-ISSN`, WOS_AHCI$`E-ISSN`[match(FLANDERSdataWOS$ISSN, WOS_AHCI$`E-ISSN`)], NA)
+FLANDERSdataWOS$online.ISSN <- ifelse(!is.na(FLANDERSdataWOS$online.ISSN_1), paste(FLANDERSdataWOS$online.ISSN_1),
+                                      ifelse(!is.na(FLANDERSdataWOS$online.ISSN_2), paste(FLANDERSdataWOS$online.ISSN_2),
+                                             ifelse(!is.na(FLANDERSdataWOS$online.ISSN_3), paste(FLANDERSdataWOS$online.ISSN_3),
+                                                    NA)))
+
+#create a smaller VABB file
+
+FLANDERSdataMINI <- FLANDERSdata %>% 
+  select("Loi", "ctitle", "title_CLEANED", "bp","ep", "bp_CLEANED", "ep_CLEANED", "pubyear","peer.reviewed", "jtitle", "ISSN1","ISSN2","ISSN3", "ISSN4","isi","lg", "first.author")
+# column 'wosID' was missing in this dataset.
+
+# Add the file with LSH results
+names(FLANDERSpairs)[1] <- "Loi"
+FLANDERSdataMINI.v2 <- left_join(FLANDERSdataMINI, FLANDERSpairs, by = "Loi")
+
+# Adjust variable types
+FLANDERSdataMINI.v2$pubyear <- as.integer(FLANDERSdataMINI.v2$pubyear)
+FLANDERSdataWOS$PUBJAAR <- as.integer(FLANDERSdataWOS$PUBJAAR)
+FLANDERSdataMINI.v2$bp_CLEANED <- as.integer(FLANDERSdataMINI.v2$bp_CLEANED)
+FLANDERSdataWOS$bp_CLEANED <- as.integer(FLANDERSdataWOS$bp_CLEANED)
+FLANDERSdataMINI.v2$ep_CLEANED <- as.integer(FLANDERSdataMINI.v2$ep_CLEANED)
+FLANDERSdataWOS$ep_CLEANED <- as.integer(FLANDERSdataWOS$ep_CLEANED)
+
+# Check for similarity
+FLANDERSdataMINI.v2 <- FLANDERSdataMINI.v2 %>% 
+  mutate(
+    check.year = ifelse(!is.na(FLANDERSdataMINI.v2$pubyear),
+                        FLANDERSdataMINI.v2$pubyear - FLANDERSdataWOS$PUBJAAR[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                        NA),
+    check.bp = ifelse(!is.na(FLANDERSdataMINI.v2$bp_CLEANED),
+                      FLANDERSdataMINI.v2$bp_CLEANED - FLANDERSdataWOS$bp_CLEANED[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                      NA),
+    check.ep = ifelse(!is.na(FLANDERSdataMINI.v2$ep_CLEANED),
+                      FLANDERSdataMINI.v2$ep_CLEANED - FLANDERSdataWOS$ep_CLEANED[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                      NA),
+    check.authors = ifelse(!is.na(FLANDERSdataMINI.v2$first.author),
+                           stringdist(FLANDERSdataMINI.v2$first.author, FLANDERSdataWOS$first.author[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                      method = "lv"),
+                           NA),
+    check.ISSN_1 = ifelse(!is.na(FLANDERSdataMINI.v2$ISSN1),
+                          stringdist(FLANDERSdataMINI.v2$ISSN1,
+                                     FLANDERSdataWOS$ISSN[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_2 = ifelse(!is.na(FLANDERSdataMINI.v2$ISSN1),
+                          stringdist(FLANDERSdataMINI.v2$ISSN1,
+                                     FLANDERSdataWOS$print.ISSN[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_3 = ifelse(!is.na(FLANDERSdataMINI.v2$ISSN1),
+                          stringdist(FLANDERSdataMINI.v2$ISSN1,
+                                     FLANDERSdataWOS$online.ISSN[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_4 = ifelse(!is.na(FLANDERSdataMINI.v2$ISSN2),
+                          stringdist(FLANDERSdataMINI.v2$ISSN2,
+                                     FLANDERSdataWOS$ISSN[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_5 = ifelse(!is.na(FLANDERSdataMINI.v2$ISSN2),
+                          stringdist(FLANDERSdataMINI.v2$ISSN2,
+                                     FLANDERSdataWOS$print.ISSN[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_6 = ifelse(!is.na(FLANDERSdataMINI.v2$ISSN2),
+                          stringdist(FLANDERSdataMINI.v2$ISSN2,
+                                     FLANDERSdataWOS$online.ISSN[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_7 = ifelse(!is.na(FLANDERSdataMINI.v2$ISSN3),
+                          stringdist(FLANDERSdataMINI.v2$ISSN3,
+                                     FLANDERSdataWOS$ISSN[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_8 = ifelse(!is.na(FLANDERSdataMINI.v2$ISSN3),
+                          stringdist(FLANDERSdataMINI.v2$ISSN3,
+                                     FLANDERSdataWOS$print.ISSN[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_9 = ifelse(!is.na(FLANDERSdataMINI.v2$ISSN3),
+                          stringdist(FLANDERSdataMINI.v2$ISSN3,
+                                     FLANDERSdataWOS$online.ISSN[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                     method = "lv"),
+                          NA),
+    check.ISSN_10 = ifelse(!is.na(FLANDERSdataMINI.v2$ISSN4),
+                           stringdist(FLANDERSdataMINI.v2$ISSN4,
+                                      FLANDERSdataWOS$ISSN[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                      method = "lv"),
+                           NA),
+    check.ISSN_11 = ifelse(!is.na(FLANDERSdataMINI.v2$ISSN4),
+                           stringdist(FLANDERSdataMINI.v2$ISSN4,
+                                      FLANDERSdataWOS$print.ISSN[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                      method = "lv"),
+                           NA),
+    check.ISSN_12 = ifelse(!is.na(FLANDERSdataMINI.v2$ISSN4),
+                           stringdist(FLANDERSdataMINI.v2$ISSN4,
+                                      FLANDERSdataWOS$online.ISSN[match(FLANDERSdataMINI.v2$wos_id, FLANDERSdataWOS$PUBID)],
+                                      method = "lv"),
+                           NA)
+  )
+#
+#(1) exact matches ## title_matchCHECK == TRUE
+FLANDERSdataMINI.v2$title_match <- FLANDERSdataWOS$PUBID[match(FLANDERSdataMINI.v2$title_CLEANED, FLANDERSdataWOS$title_CLEANED)] # this retrieves WoS ID using exact match of a title
+
+FLANDERSdataMINI.v2$title_matchCHECK <- ifelse(!is.na(FLANDERSdataMINI.v2$title_match), 
+                                               ifelse(FLANDERSdataMINI.v2$pubyear == FLANDERSdataWOS$PUBJAAR[match(FLANDERSdataMINI.v2$title_match, FLANDERSdataWOS$PUBID)],
+                                                      ifelse(FLANDERSdataMINI.v2$bp_CLEANED == FLANDERSdataWOS$bp_CLEANED[match(FLANDERSdataMINI.v2$title_match, FLANDERSdataWOS$PUBID)],
+                                                             ifelse(FLANDERSdataMINI.v2$ep_CLEANED == FLANDERSdataWOS$ep_CLEANED[match(FLANDERSdataMINI.v2$title_match, FLANDERSdataWOS$PUBID)],
+                                                                    TRUE, FALSE),
+                                                             FALSE),
+                                                      FALSE),
+                                               NA) # this validates the matched title with year and page numbers
+
+#(2) LSH rule 1 ## rule1.ID == "YES"
+test.rule1 <- FLANDERSdataMINI.v2 %>% 
+  filter(jaccard >= 0.75 & (check.year >= -2 & check.year <= 1) & (check.bp == 0|check.ep == 0))
+
+FLANDERSdataMINI.v2 <- FLANDERSdataMINI.v2 %>% 
+  mutate(
+    rule1.ID = ifelse(FLANDERSdataMINI.v2$Loi %in% test.rule1$Loi, "YES", "NO") 
+  )
+
+#(3) LSH rule 2 rule2.ID == "YES"
+test.rule2 <- FLANDERSdataMINI.v2 %>% 
+  filter(jaccard >= 0.30 & (check.year >= -2 & check.year <= 1) & (check.bp == 0|check.ep == 0) &
+           (check.ISSN_1 == 0|check.ISSN_2==0|check.ISSN_3==0|check.ISSN_4==0|check.ISSN_5==0
+            |check.ISSN_6==0|check.ISSN_7==0|check.ISSN_8==0|check.ISSN_9==0|check.ISSN_10==0|check.ISSN_11==0|
+              check.ISSN_12==0) &
+           check.authors <= 2)
+
+FLANDERSdataMINI.v2 <- FLANDERSdataMINI.v2 %>% 
+  mutate(
+    rule2.ID = ifelse(FLANDERSdataMINI.v2$Loi %in% test.rule2$Loi, "YES", "NO") 
+  )
+
+#(4) LSH rule 3 rule3.ID == "YES"
+test.rule3 <- FLANDERSdataMINI.v2 %>% 
+  filter(jaccard >= 0.65 & (check.year >= -2 & check.year <= 1) &
+           (check.ISSN_1 == 0|check.ISSN_2==0|check.ISSN_3==0|check.ISSN_4==0|check.ISSN_5==0
+            |check.ISSN_6==0|check.ISSN_7==0|check.ISSN_8==0|check.ISSN_9==0|check.ISSN_10==0|check.ISSN_11==0|
+              check.ISSN_12==0))
+
+FLANDERSdataMINI.v2 <- FLANDERSdataMINI.v2 %>% 
+  mutate(
+    rule3.ID = ifelse(FLANDERSdataMINI.v2$Loi %in% test.rule3$Loi, "YES", "NO") 
+  )
+
+#(5) manual matching manual.match == "YES"
+FLANDERSdataMINI.v2 <- left_join(FLANDERSdataMINI.v2, FLANDERS_MANUALPAIRS, by = "Loi")
+FLANDERSdataMINI.v2 <- FLANDERSdataMINI.v2 %>% 
+  mutate(
+    manual.match = ifelse(!is.na(PUBID), "YES", "NO")
+  )
+
+#COMBINE MATCHED RESULTS
+FLANDERSdataMINI.v2$indexed.WOS1 <- ifelse(FLANDERSdataMINI.v2$title_matchCHECK == TRUE, TRUE,
+                                           ifelse(FLANDERSdataMINI.v2$rule1.ID == "YES", TRUE,
+                                                  ifelse(FLANDERSdataMINI.v2$rule2.ID == "YES", TRUE,
+                                                         ifelse(FLANDERSdataMINI.v2$rule3.ID == "YES", TRUE,
+                                                                ifelse(FLANDERSdataMINI.v2$manual.match == "YES", TRUE,
+                                                                       FALSE)))))
+
+FLANDERSdataMINI.v2$indexed.WOS2 <- ifelse(is.na(FLANDERSdataMINI.v2$title_matchCHECK)&FLANDERSdataMINI.v2$rule1.ID == "YES", TRUE,
+                                           ifelse(FLANDERSdataMINI.v2$rule2.ID == "YES", TRUE,
+                                                  ifelse(FLANDERSdataMINI.v2$rule3.ID == "YES", TRUE,
+                                                         ifelse(FLANDERSdataMINI.v2$manual.match == "YES", TRUE,
+                                                                FALSE))))
+
+FLANDERSdataMINI.v2$indexed.WOS_FIN <- ifelse(FLANDERSdataMINI.v2$indexed.WOS1 == TRUE|FLANDERSdataMINI.v2$indexed.WOS2 == TRUE, TRUE, FALSE)
+
+#
+FLANDERSdataMINI.v2$WOS_UT_01 <- ifelse(FLANDERSdataMINI.v2$title_matchCHECK == TRUE, FLANDERSdataMINI.v2$title_match, NA)
+FLANDERSdataMINI.v2$WOS_UT_02 <- ifelse(FLANDERSdataMINI.v2$rule1.ID == "YES"|FLANDERSdataMINI.v2$rule2.ID == "YES"|FLANDERSdataMINI.v2$rule3.ID == "YES",
+                                        FLANDERSdataMINI.v2$wos_id, NA)
+FLANDERSdataMINI.v2$WOS_UT_03 <- ifelse(FLANDERSdataMINI.v2$manual.match == "YES", FLANDERSdataMINI.v2$PUBID, NA)
+FLANDERSdataMINI.v2$WOS_UT_FINAL <- ifelse(!is.na(FLANDERSdataMINI.v2$WOS_UT_01), FLANDERSdataMINI.v2$WOS_UT_01,
+                                           ifelse(!is.na(FLANDERSdataMINI.v2$WOS_UT_02), FLANDERSdataMINI.v2$WOS_UT_02,
+                                                  ifelse(!is.na(FLANDERSdataMINI.v2$WOS_UT_03), FLANDERSdataMINI.v2$WOS_UT_03,
+                                                         NA)))
+
+#                                                         
+FLANDERSdata_WOS <- left_join(FLANDERSdataMINI.v2, WOSdata, by = "WOS_UT_FINAL") %>% distinct(Loi, .keep_all = TRUE)
+
+VABBdata13 <- left_join(VABBdata12, FLANDERSdata_WOS, by = "Loi")
