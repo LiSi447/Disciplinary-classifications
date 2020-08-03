@@ -1,4 +1,3 @@
-
 # call packages ----------------------------------------------------------
 
 library(tidyverse)
@@ -56,6 +55,8 @@ FLANDERS_MANUALPAIRS <- read_csv2("./Raw data/Web of Science - matching/FLANDERS
 
 WOSdata <- read_csv("./Raw data/Web of Science - online/WOSdata_17012019.csv",
                     col_types = cols(.default = "c")) # WoS data retrieved online using WoS ID
+
+FL_Jaccard <- read_csv("./Raw data/Jaccard calculation/VL_Jaccard.csv")
 
 # Prep VABB data ----------------------------------------------------------
 
@@ -588,3 +589,7 @@ FLANDERSdataMINI.v2$WOS_UT_FINAL <- ifelse(!is.na(FLANDERSdataMINI.v2$WOS_UT_01)
 FLANDERSdata_WOS <- left_join(FLANDERSdataMINI.v2, WOSdata, by = "WOS_UT_FINAL") %>% distinct(Loi, .keep_all = TRUE)
 
 VABBdata13 <- left_join(VABBdata12, FLANDERSdata_WOS, by = "Loi")
+
+# Add Jaccard calculation -------------------------------------------------
+
+VABBdata14 <- left_join(VABBdata13, FL_Jaccard, by = "Loi")
