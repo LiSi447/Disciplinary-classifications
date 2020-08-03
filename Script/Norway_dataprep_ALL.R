@@ -34,8 +34,10 @@ MANUALPAIRS <- read_csv2("./Raw data/Web of Science - matching/NO_WOSCRISTIN_MAN
 WOSdata <- read_csv("./Raw data/Web of Science - online/WOSdata_17012019.csv",
                     col_types = list("WOS_UT_FINAL" = col_character()))
 
-All_journals <- read_csv("./Raw data/Alljournals_09072019_CLEANED.csv", # journals' classification
+All_journals <- read_csv("./Raw data/Alljournals_09072019_CLEANED.csv", # journals' classification ; ERIH not included
                          col_types = cols(.default = "c"))
+
+erih <- read_csv2("./Raw data/ERIH PLUS/2020-04-03 ERIH PLUS approved journals and series.csv")
 
 # prep CRISTIN data -------------------------------------------------------
 
@@ -383,3 +385,60 @@ CRISTINdata_VABB <- left_join(CRISTIN_ISSNs, VABBjournals_FOS, by = "ISSN") %>% 
 
 CRISTINdata.11 <- left_join(CRISTINdata.10, CRISTINdata_VABB, by = "VARBEIDLOPENR") # join on Loi the classification data set to the main VABB data set
 
+# Add ERIH PLUS classification --------------------------------------------
+
+# Clean up ERIH PLUS codes
+
+erih.wip <- erih %>% 
+  select(`NSD Journal ID`, erih.OECD = `OECD classifications`) %>% 
+  separate(erih.OECD, paste0("erih.oecd",1:14), sep = "; ") %>% 
+  gather(d.nr, erih.oecd, erih.oecd1:erih.oecd14) %>% 
+  filter(!is.na(erih.oecd)) %>% 
+  mutate(
+    erih.oecd = as.factor(str_replace(erih.oecd, " \\(.+\\)", ""))
+  ) %>% 
+  select(-d.nr)
+
+erih.disc <- erih.wip %>% count(erih.oecd)
+
+erih.wip$erih.oecd <- fct_collapse(erih.wip$erih.oecd,
+                                   FOS_5_1 = c("Psychology"),
+                                   FOS_5_2 = c("Economics and Business"),
+                                   FOS_5_3 = c("Educational Sciences"),
+                                   FOS_5_4 = c("Sociology"),
+                                   FOS_5_5 = c("Law"),
+                                   FOS_5_6 = c("Political Science"),
+                                   FOS_5_7 = c("Social and Economic Geography"),
+                                   FOS_5_8 = c("Media and Communications"),
+                                   FOS_5_9 = c("Other Social Sciences"),
+                                   FOS_6_1 = c("History and Archaeology"),
+                                   FOS_6_2 = c("Languages and Literature"),
+                                   FOS_6_3 = c("Philosophy, Ethics and Religion"),
+                                   FOS_6_4 = c("Arts"),
+                                   FOS_6_5 = c("Other Humanities"))
+
+erih <- left_join(erih, erih.wip, by = "NSD Journal ID")
+
+# Prep erih
+
+erih.ISSNs <- erih %>% 
+  select(`NSD Journal ID`, `Print ISSN`, `Online ISSN`, erih.oecd) %>% 
+  gather(ISSN_nr, ISSN, `Print ISSN`:`Online ISSN`) %>% 
+  filter(!is.na(ISSN)) %>% 
+  select(-ISSN_nr) %>% 
+  distinct(`NSD Journal ID`, ISSN, erih.oecd)
+
+# Add to CRISTIN data
+
+CRISTIN_ISSNs_erih <- left_join(CRISTIN_ISSNs, erih.ISSNs, by = "ISSN") %>% 
+  filter(!is.na(erih.oecd)) %>% 
+  distinct(VARBEIDLOPENR, erih.oecd, .keep_all = TRUE) %>% 
+  select(VARBEIDLOPENR, erih.oecd, `NSD Journal ID`) %>% 
+  group_by(VARBEIDLOPENR) %>% 
+  mutate(count.ID = row_number()) %>% 
+  ungroup() %>% 
+  spread(count.ID, erih.oecd)
+
+names(CRISTIN_ISSNs_erih) <- c("VARBEIDLOPENR", "NSD Journal ID", paste0("erih.oecd", 1:11))
+
+CRISTINdata.12 <- left_join(CRISTINdata.11, CRISTIN_ISSNs_erih, by = "VARBEIDLOPENR")
