@@ -593,3 +593,11 @@ VABBdata13 <- left_join(VABBdata12, FLANDERSdata_WOS, by = "Loi")
 # Add Jaccard calculation -------------------------------------------------
 
 VABBdata14 <- left_join(VABBdata13, FL_Jaccard, by = "Loi")
+
+# Export data -------------------------------------------------------------
+
+currentDate <- Sys.Date()
+
+csvFileName_1 <- paste0("./Output/FLANDERS_", currentDate, ".csv")
+
+write_csv(VABBdata14, csvFileName_1, na = "")
