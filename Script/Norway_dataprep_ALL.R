@@ -34,6 +34,9 @@ MANUALPAIRS <- read_csv2("./Raw data/Web of Science - matching/NO_WOSCRISTIN_MAN
 WOSdata <- read_csv("./Raw data/Web of Science - online/WOSdata_17012019.csv",
                     col_types = list("WOS_UT_FINAL" = col_character()))
 
+All_journals <- read_csv("./Raw data/Alljournals_09072019_CLEANED.csv", # journals' classification
+                         col_types = cols(.default = "c"))
+
 # prep CRISTIN data -------------------------------------------------------
 
 # Adjust column names
@@ -49,7 +52,7 @@ CRISTINdata.01 <- CRISTINdata.FULL %>%
 CRISTIN_ISSNs <- CRISTINdata.FULL %>% 
   select(VARBEIDLOPENR, ISSN, ISSN_ELEKTRONISK) %>% 
   gather(ISSN_NR, ISSN, ISSN:ISSN_ELEKTRONISK) %>% 
-  filter(!is.na(ISSN)) %>% 
+  filter(!is.na(ISSN)  & ISSN != "") %>% 
   distinct(VARBEIDLOPENR, ISSN)
 
 # Assign fractionalised count ---------------------------------------------
@@ -364,3 +367,19 @@ NORWAYdata_WOS <- left_join(NORWAYdataMINI.v2, WOSdata, by = "WOS_UT_FINAL")
 NORWAYdata_WOS <- NORWAYdata_WOS %>% distinct(VARBEIDLOPENR, .keep_all = TRUE)
 
 CRISTINdata.10 <- left_join(CRISTINdata.09, NORWAYdata_WOS, by = "VARBEIDLOPENR")
+
+# Add VABB classification -------------------------------------------------
+
+VABBjournals_FOS <- All_journals %>% # copy the journal classification data set
+  select(VABB.FOS1:VABB.FOS5, ISSN1:ISSN4) %>%  
+  gather(ISSN_NR, ISSN, ISSN1:ISSN4) %>%  
+  filter(!is.na(ISSN)) %>% 
+  select(-ISSN_NR) 
+
+CRISTINdata_VABB <- left_join(CRISTIN_ISSNs, VABBjournals_FOS, by = "ISSN") %>% # join on ISSN the article and the journal data set
+  filter(!is.na(VABB.FOS1)) %>% 
+  distinct(VARBEIDLOPENR, .keep_all = TRUE) %>% # The join generates 7 duplicates. I use the first one
+  select(-ISSN)
+
+CRISTINdata.11 <- left_join(CRISTINdata.10, CRISTINdata_VABB, by = "VARBEIDLOPENR") # join on Loi the classification data set to the main VABB data set
+
