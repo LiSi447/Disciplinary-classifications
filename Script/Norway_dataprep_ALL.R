@@ -39,6 +39,8 @@ All_journals <- read_csv("./Raw data/Alljournals_09072019_CLEANED.csv", # journa
 
 erih <- read_csv2("./Raw data/ERIH PLUS/2020-04-03 ERIH PLUS approved journals and series.csv")
 
+NO_Jaccard <- read_csv("./Raw data/Jaccard calculation/NO_Jaccard.csv")
+
 # prep CRISTIN data -------------------------------------------------------
 
 # Adjust column names
@@ -442,3 +444,9 @@ CRISTIN_ISSNs_erih <- left_join(CRISTIN_ISSNs, erih.ISSNs, by = "ISSN") %>%
 names(CRISTIN_ISSNs_erih) <- c("VARBEIDLOPENR", "NSD Journal ID", paste0("erih.oecd", 1:11))
 
 CRISTINdata.12 <- left_join(CRISTINdata.11, CRISTIN_ISSNs_erih, by = "VARBEIDLOPENR")
+
+
+# Add Jaccard calculation -------------------------------------------------
+
+CRISTINdata.13 <- left_join(CRISTINdata.12, NO_Jaccard, by = "VARBEIDLOPENR")
+
