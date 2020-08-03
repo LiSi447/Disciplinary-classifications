@@ -138,6 +138,7 @@ system.time(for (i in 1:nrow(nsd_COMPLETE)) {
   }
 })
 
+nsd_COMPLETE$level <- unlist(nsd_COMPLETE$level)
 
 # Recode NSD values
 
@@ -450,3 +451,10 @@ CRISTINdata.12 <- left_join(CRISTINdata.11, CRISTIN_ISSNs_erih, by = "VARBEIDLOP
 
 CRISTINdata.13 <- left_join(CRISTINdata.12, NO_Jaccard, by = "VARBEIDLOPENR")
 
+# Export data -------------------------------------------------------------
+
+currentDate <- Sys.Date()
+
+csvFileName_1 <- paste0("./Output/NORWAY_", currentDate, ".csv")
+
+write_csv(CRISTINdata.13, csvFileName_1, na = "")
