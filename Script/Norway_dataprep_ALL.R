@@ -59,33 +59,6 @@ CRISTIN_ISSNs <- CRISTINdata.FULL %>%
   filter(!is.na(ISSN)  & ISSN != "") %>% 
   distinct(VARBEIDLOPENR, ISSN)
 
-# Assign fractionalised count ---------------------------------------------
-
-# calculate fractions (authors with two institutions taken into account)
-
-n_duplicate_authorID <- CRISTINdata.01 %>% 
-  group_by(VARBEIDLOPENR, GENERERT_PERSONLOPENR) %>% 
-  count()
-
-colnames(n_duplicate_authorID)[3] <- "N_AuthorID"
-
-CRISTINdata.02 <- CRISTINdata.01 %>%
-  left_join(n_duplicate_authorID, by = c("VARBEIDLOPENR", "GENERERT_PERSONLOPENR")) %>% 
-  mutate(
-    denominator = ANTALL_FORFATTERE * N_AuthorID,
-    fraction = 1 / denominator
-  )
-
-#Calculate fractionalised count per publication ID
-
-pub_fract <- aggregate(CRISTINdata.02$fraction, by=list(VARBEIDLOPENR=CRISTINdata.02$VARBEIDLOPENR), FUN=sum)
-
-colnames(pub_fract)[2] <- c("Fract_count")
-
-#Assign to Cristin data
-
-CRISTINdata.03 <- CRISTINdata.02 %>% left_join(pub_fract, by = "VARBEIDLOPENR")
-
 # Delineate institutions
 NORW.inst <- c("00000000184",
                "00000000185",
@@ -96,7 +69,34 @@ NORW.inst <- c("00000000184",
                "00000000204",
                "00000000217")
 
-CRISTINdata.04 <- filter(CRISTINdata.03, INSTITUSJONSNR %in% NORW.inst)
+CRISTINdata.02 <- filter(CRISTINdata.01, INSTITUSJONSNR %in% NORW.inst)
+
+# Assign fractionalised count ---------------------------------------------
+
+# calculate fractions (authors with two institutions taken into account)
+
+n_duplicate_authorID <- CRISTINdata.02 %>% 
+  group_by(VARBEIDLOPENR, GENERERT_PERSONLOPENR) %>% 
+  count()
+
+colnames(n_duplicate_authorID)[3] <- "N_AuthorID"
+
+CRISTINdata.03 <- CRISTINdata.02 %>%
+  left_join(n_duplicate_authorID, by = c("VARBEIDLOPENR", "GENERERT_PERSONLOPENR")) %>% 
+  mutate(
+    denominator = ANTALL_FORFATTERE * N_AuthorID,
+    fraction = 1 / denominator
+  )
+
+#Calculate fractionalised count per publication ID
+
+pub_fract <- aggregate(CRISTINdata.03$fraction, by=list(VARBEIDLOPENR=CRISTINdata.02$VARBEIDLOPENR), FUN=sum)
+
+colnames(pub_fract)[2] <- c("Fract_count")
+
+#Assign to Cristin data
+
+CRISTINdata.04 <- CRISTINdata.03 %>% left_join(pub_fract, by = "VARBEIDLOPENR")
 
 #deduplicate
 CRISTINdata.05 <- distinct(CRISTINdata.04, VARBEIDLOPENR, .keep_all = TRUE)
