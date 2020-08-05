@@ -872,7 +872,7 @@ NSD.notSSH.VABB <- E_VABB %>%
 
 # Norway
 
-E.CRISTIN.notSSH <- E_CRISTIN %>% 
+VABB.notSSH.CRISTIN <- E_CRISTIN %>% 
   select(VARBEIDLOPENR, VABB.FOS1:VABB.FOS5, Fract_count) %>% 
   gather(VABB.FOS_nr, VABB.FOS, VABB.FOS1:VABB.FOS5) %>%
   filter(!VABB.FOS %in% cog_vars_SSH.FOS & !is.na(VABB.FOS)) %>% 
@@ -882,3 +882,14 @@ E.CRISTIN.notSSH <- E_CRISTIN %>%
   mutate_if(is.numeric, ~ round(., 1)) %>% 
   arrange(desc(sum)) %>% 
   head(10)
+
+
+# Not SSH Combined --------------------------------------------------------
+
+# Flanders
+
+NotSSH.VABB <- cbind(WOS.notSSH.VABB, SM.notSSH.VABB, NSD.notSSH.VABB)
+
+# Norway
+
+NotSSH.CRISTIN <-cbind(WOS.notSSH.CRISTIN, SM.notSSH.CRISTIN, VABB.notSSH.CRISTIN)
