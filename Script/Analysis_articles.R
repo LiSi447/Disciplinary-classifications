@@ -825,3 +825,33 @@ SM.notSSH.CRISTIN <- C_CRISTIN %>%
   mutate_if(is.numeric, ~ round(., 1)) %>% 
   arrange(desc(sum)) %>% 
   head(10)
+
+# Not SSH ERIH PLUS --------------------------------------------------
+
+# Flanders
+
+ERIH.notSSH.VABB <- D_VABB %>% 
+  select(Loi, Fract_count, erih.oecd1:erih.oecd13) %>% 
+  gather(erih.OECD_nr, erih.OECD, erih.oecd1:erih.oecd13) %>%
+  filter(!erih.OECD %in% cog_vars_SSH.FOS & !is.na(erih.OECD)) %>%
+  distinct(Loi, erih.OECD, .keep_all = TRUE) %>% 
+  group_by(erih.OECD) %>% 
+  summarise(sum = sum(as.double(Fract_count))) %>% 
+  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  arrange(desc(sum)) %>% 
+  head(10)
+
+# Norway
+
+ERIH.notSSH.CRISTIN <- D_CRISTIN %>% 
+  select(VARBEIDLOPENR, Fract_count, erih.oecd1:erih.oecd11) %>% 
+  gather(erih.OECD_nr, erih.OECD, erih.oecd1:erih.oecd11) %>%
+  filter(!erih.OECD %in% cog_vars_SSH.FOS & !is.na(erih.OECD)) %>%
+  distinct(VARBEIDLOPENR, erih.OECD, .keep_all = TRUE) %>% 
+  group_by(erih.OECD) %>% 
+  summarise(sum = sum(as.double(Fract_count))) %>% 
+  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  arrange(desc(sum)) %>% 
+  head(10)
+
+# ! does not contain any non-SSH articles
