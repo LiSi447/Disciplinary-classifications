@@ -95,7 +95,8 @@ totals.A.VABB <- data.frame(VABB.FOS, sum)
 
 A_VABB_SSH <- A_VABB_SSH %>% 
   rbind(totals.A.VABB) %>% 
-  mutate(share = sum / sum(as.double(A.VABB.SSH.only.distinct$Fract_count)) * 100)
+  mutate(share = sum / sum(as.double(A.VABB.SSH.only.distinct$Fract_count)) * 100) %>% 
+  mutate_if(is.numeric, ~ round(., 1))
 
 # Norway
 
@@ -124,7 +125,8 @@ totals.A.CRISTIN <- data.frame(NSD.OECD, sum)
 
 A_CRISTIN_SSH <- A_CRISTIN_SSH %>% 
   rbind(totals.A.CRISTIN) %>% 
-  mutate(share = sum / sum(as.double(A_CRISTIN$Fract_count)) * 100)
+  mutate(share = sum / sum(as.double(A_CRISTIN$Fract_count)) * 100) %>% 
+  mutate_if(is.numeric, ~ round(., 1))
   
 # Appendix 2. Dataset B WoS -----------------------------------------------
 
@@ -265,7 +267,8 @@ B_VABB.combined <- B_VABB.combined %>%
     percentage.difference.WOS = ((n.WOS - n.VABB) / ((n.WOS + n.VABB) / 2)) * 100,
     percentage.error.VABB = ((n.VABB - n.WOS) / n.VABB) * 100,
     percentage.error.WOS = ((n.WOS - n.VABB) / n.WOS) * 100
-  )
+  ) %>% 
+  mutate_if(is.numeric, ~ round(., 1))
 
 # Norway
 
@@ -281,7 +284,8 @@ B_CRISTIN.combined <- B_CRISTIN.combined %>%
     percentage.difference.WOS = ((n.WOS - n.CRISTIN) / ((n.WOS + n.CRISTIN) / 2)) * 100,
     percentage.error.CRISTIN = ((n.CRISTIN - n.WOS) / n.CRISTIN) * 100,
     percentage.error.WOS = ((n.WOS - n.CRISTIN) / n.WOS) * 100
-  )
+  ) %>% 
+  mutate_if(is.numeric, ~ round(., 1))
 
 # Appendix 3. Dataset C. Science-Metrix -----------------------------------
 
@@ -445,7 +449,8 @@ C_CRISTIN.combined <- C_CRISTIN.combined %>%
     percentage.difference.SM = ((n.SM - n.CRISTIN) / ((n.SM + n.CRISTIN) / 2)) * 100,
     percentage.error.CRISTIN = ((n.CRISTIN - n.SM) / n.CRISTIN) * 100,
     percentage.error.SM = ((n.SM - n.CRISTIN) / n.SM) * 100
-  )
+  ) %>% 
+  mutate_if(is.numeric, ~ round(., 1))
 
 # Appendix 4. Dataset D. ERIH PLUS ----------------------------------------
 
@@ -587,7 +592,8 @@ D_VABB.combined <- D_VABB.combined %>%
     percentage.difference.ERIH = ((n.ERIH - n.VABB) / ((n.ERIH + n.VABB) / 2)) * 100,
     percentage.error.VABB = ((n.VABB - n.ERIH) / n.VABB) * 100,
     percentage.error.ERIH = ((n.ERIH - n.VABB) / n.ERIH) * 100
-  )
+  ) %>% 
+  mutate_if(is.numeric, ~ round(., 1))
 
 # Norway
 
@@ -603,7 +609,8 @@ D_CRISTIN.combined <- D_CRISTIN.combined %>%
     percentage.difference.ERIH = ((n.ERIH - n.CRISTIN) / ((n.ERIH + n.CRISTIN) / 2)) * 100,
     percentage.error.CRISTIN = ((n.CRISTIN - n.ERIH) / n.CRISTIN) * 100,
     percentage.error.ERIH = ((n.ERIH - n.CRISTIN) / n.ERIH) * 100
-  )
+  ) %>% 
+  mutate_if(is.numeric, ~ round(., 1))
 
 # Appendix 5. Dataset E. VABB and NSD. opposite ---------------------------
 
@@ -746,7 +753,8 @@ E_VABB.combined <- E_VABB.combined %>%
     percentage.difference.CRISTIN = ((n.CRISTIN - n.VABB) / ((n.CRISTIN + n.VABB) / 2)) * 100,
     percentage.error.VABB = ((n.VABB - n.CRISTIN) / n.VABB) * 100,
     percentage.error.CRISTIN = ((n.CRISTIN - n.VABB) / n.CRISTIN) * 100
-  )
+  ) %>% 
+  mutate_if(is.numeric, ~ round(., 1))
 
 # Norway
 
@@ -762,4 +770,5 @@ E_CRISTIN.combined <- E_CRISTIN.combined %>%
     percentage.difference.VABB = ((n.VABB - n.CRISTIN) / ((n.VABB + n.CRISTIN) / 2)) * 100,
     percentage.error.CRISTIN = ((n.CRISTIN - n.VABB) / n.CRISTIN) * 100,
     percentage.error.VABB = ((n.VABB - n.CRISTIN) / n.VABB) * 100
-  )
+  ) %>% 
+  mutate_if(is.numeric, ~ round(., 1))
