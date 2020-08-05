@@ -800,3 +800,28 @@ WOS.notSSH.CRISTIN <- B_CRISTIN %>%
   arrange(desc(sum)) %>% 
   head(10)
 
+# Not SSH Science-Metrix --------------------------------------------------
+
+# Flanders
+
+SM.notSSH.VABB <- C_VABB %>% 
+  select(Loi, Fract_count, SM.OECD) %>% 
+  filter(!SM.OECD %in% cog_vars_SSH.FOS) %>% 
+  distinct(Loi, SM.OECD, .keep_all = TRUE) %>% 
+  group_by(SM.OECD) %>% 
+  summarise(sum = sum(as.double(Fract_count))) %>% 
+  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  arrange(desc(sum)) %>% 
+  head(10)
+
+# Norway
+
+SM.notSSH.CRISTIN <- C_CRISTIN %>% 
+  select(VARBEIDLOPENR, Fract_count, SM.OECD) %>% 
+  filter(!SM.OECD %in% cog_vars_SSH.FOS) %>% 
+  distinct(VARBEIDLOPENR, SM.OECD, .keep_all = TRUE) %>% 
+  group_by(SM.OECD) %>% 
+  summarise(sum = sum(as.double(Fract_count))) %>% 
+  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  arrange(desc(sum)) %>% 
+  head(10)
