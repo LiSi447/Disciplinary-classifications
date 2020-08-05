@@ -604,3 +604,162 @@ D_CRISTIN.combined <- D_CRISTIN.combined %>%
     percentage.error.CRISTIN = ((n.CRISTIN - n.ERIH) / n.CRISTIN) * 100,
     percentage.error.ERIH = ((n.ERIH - n.CRISTIN) / n.ERIH) * 100
   )
+
+# Appendix 5. Dataset E. VABB and NSD. opposite ---------------------------
+
+# Flanders
+
+NSD.onlySSH.VABB <- E_VABB %>% 
+  select(Loi, Fract_count, NSD.OECD) %>% 
+  filter(NSD.OECD %in% cog_vars_SSH.FOS) %>% 
+  distinct(Loi, NSD.OECD, .keep_all = TRUE)
+
+NSD.onlySSH.VABB.distinct <- NSD.onlySSH.VABB %>% distinct(Loi, .keep_all = TRUE)
+NSD.onlySS.VABB <- NSD.onlySSH.VABB %>% filter(NSD.OECD %in% cog_vars_SS.FOS) %>% distinct(Loi, .keep_all = TRUE)
+NSD.onlyH.VABB <- NSD.onlySSH.VABB %>% filter(NSD.OECD %in% cog_vars_H.FOS) %>% distinct(Loi, .keep_all = TRUE)
+
+E_VABB_SSH_NSD <- NSD.onlySSH.VABB %>% 
+  group_by(NSD.OECD) %>% 
+  summarise(sum = sum(as.double(Fract_count)))
+
+sum <- c(sum(as.double(NSD.onlySS.VABB$Fract_count)),
+         sum(as.double(NSD.onlyH.VABB$Fract_count)),
+         sum(as.double(NSD.onlySSH.VABB.distinct$Fract_count))
+)
+
+NSD.OECD <- c("SS.total", "H.total", "SSH.total")
+
+totals.E.VABB.NSD <- data.frame(NSD.OECD, sum)
+
+E_VABB_SSH_NSD <- E_VABB_SSH_NSD %>% 
+  rbind(totals.E.VABB.NSD) %>% 
+  mutate(share = sum / sum(as.double(NSD.onlySSH.VABB.distinct$Fract_count)) * 100)
+
+# Norway
+
+E.CRISTIN.SSH.only <- E_CRISTIN %>% 
+  select(VARBEIDLOPENR, VABB.FOS1:VABB.FOS5, Fract_count) %>% 
+  gather(VABB.FOS_nr, VABB.FOS, VABB.FOS1:VABB.FOS5) %>%
+  filter(VABB.FOS %in% cog_vars_SSH.FOS) %>% 
+  distinct(VARBEIDLOPENR, VABB.FOS, .keep_all = TRUE)
+
+E.CRISTIN.SSH.only.distinct <- E.CRISTIN.SSH.only %>% distinct(VARBEIDLOPENR, .keep_all = TRUE)
+E.CRISTIN.SS <- E.CRISTIN.SSH.only %>% filter(VABB.FOS %in% cog_vars_SS.FOS) %>% distinct(VARBEIDLOPENR, .keep_all = TRUE)
+E.CRISTIN.H <- E.CRISTIN.SSH.only %>% filter(VABB.FOS %in% cog_vars_H.FOS) %>% distinct(VARBEIDLOPENR, .keep_all = TRUE)
+
+E_CRISTIN_SSH <- E.CRISTIN.SSH.only %>% 
+  group_by(VABB.FOS) %>% 
+  summarise(sum = sum(as.double(Fract_count))) 
+
+VABB.FOS <- c("SS.total", "H.total", "SSH.total")
+
+sum <- c(sum(as.double(E.CRISTIN.SS$Fract_count)),
+         sum(as.double(E.CRISTIN.H$Fract_count)),
+         sum(as.double(E.CRISTIN.SSH.only.distinct$Fract_count))
+)
+
+totals.E.CRISTIN <- data.frame(VABB.FOS, sum)
+
+E_CRISTIN_SSH_VABB <- E_CRISTIN_SSH %>% 
+  rbind(totals.E.CRISTIN) %>% 
+  mutate(share = sum / sum(as.double(E.CRISTIN.SSH.only.distinct$Fract_count)) * 100)
+
+# Appendix 5. Dataset E. VABB and NSD. original ---------------------------
+
+# Flanders
+
+E.onlySSH.VABB <- E_VABB %>% 
+  select(Loi, VABB.FOS1:VABB.FOS5, Fract_count, jaccard_vabb_npu) %>% 
+  gather(VABB.FOS_nr, VABB.FOS, VABB.FOS1:VABB.FOS5) %>%
+  filter(VABB.FOS %in% cog_vars_SSH.FOS) %>% 
+  distinct(Loi, VABB.FOS, .keep_all = TRUE)
+
+E.onlySSH.VABB.distinct <- E.onlySSH.VABB %>% distinct(Loi, .keep_all = TRUE)
+E.onlySS.VABB <- E.onlySSH.VABB %>% filter(VABB.FOS %in% cog_vars_SS.FOS) %>% distinct(Loi, .keep_all = TRUE)
+E.onlyH.VABB <- E.onlySSH.VABB %>% filter(VABB.FOS %in% cog_vars_H.FOS) %>% distinct(Loi, .keep_all = TRUE)
+
+E_VABB_SSH_VABB <- E.onlySSH.VABB %>% 
+  group_by(VABB.FOS) %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard = mean(as.double(jaccard_vabb_npu), na.rm = TRUE)
+  )
+
+VABB.FOS <- c("SS.total", "H.total", "SSH.total")
+
+sum <- c(sum(as.double(E.onlySS.VABB$Fract_count)),
+         sum(as.double(E.onlyH.VABB$Fract_count)),
+         sum(as.double(E.onlySSH.VABB.distinct$Fract_count)))
+
+
+jaccard <- c(mean(as.double(E_VABB_SSH_VABB$jaccard[1:9]), na.rm = TRUE),
+            mean(as.double(E_VABB_SSH_VABB$jaccard[10:14]), na.rm = TRUE),
+           mean(as.double(E_VABB$jaccard_vabb_npu), na.rm = TRUE))
+
+totals.E.VABB.VABB <- data.frame(VABB.FOS, sum, jaccard)
+
+E_VABB_SSH_VABB <- E_VABB_SSH_VABB %>% 
+  rbind(totals.E.VABB.VABB) %>% 
+  mutate(share = sum / sum(as.double(E.onlySSH.VABB.distinct$Fract_count)) * 100)
+
+# Norway 
+
+E_CRISTIN_SSH_CRISTIN <- E_CRISTIN %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_vabb_npu) %>% 
+  group_by(NSD.OECD) %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard = mean(as.double(jaccard_vabb_npu), na.rm = TRUE)
+  ) %>% 
+  filter(NSD.OECD %in% cog_vars_SSH.FOS)
+
+NSD.OECD <- c("SS.total", "H.total", "SSH.total")
+
+sum <- c(sum(E_CRISTIN_SSH_CRISTIN$sum[1:9]),
+         sum(E_CRISTIN_SSH_CRISTIN$sum[10:14]),
+         sum(as.double(E_CRISTIN$Fract_count))
+)
+
+jaccard <- c(mean(as.double(E_CRISTIN_SSH_CRISTIN$jaccard[1:9]), na.rm = TRUE),
+            mean(as.double(E_CRISTIN_SSH_CRISTIN$jaccard[10:14]), na.rm = TRUE),
+           mean(as.double(E_CRISTIN$jaccard_vabb_npu), na.rm = TRUE))
+
+totals.C.CRISTIN.CRISTIN <- data.frame(NSD.OECD, sum, jaccard)
+
+
+E_CRISTIN_SSH_CRISTIN <- E_CRISTIN_SSH_CRISTIN %>% 
+  rbind(totals.C.CRISTIN.CRISTIN) %>% 
+  mutate(share = sum / sum(as.double(E_CRISTIN$Fract_count)) * 100)
+
+
+# Appendix 5. Dataset E. Combined -----------------------------------------
+
+# Flanders
+
+E_VABB.combined <- cbind(E_VABB_SSH_VABB, E_VABB_SSH_NSD)
+names(E_VABB.combined) <- c("Discipline", "n.VABB", "jaccard", "share.VABB", "d", "n.CRISTIN", "share.CRISTIN")
+
+E_VABB.combined <- E_VABB.combined %>% 
+  select(Discipline, n.VABB, n.CRISTIN, share.VABB, share.CRISTIN) %>% # add jaccard
+  mutate(
+    share.difference.VABB = (share.VABB - share.CRISTIN),
+    share.difference.CRISTIN = (share.CRISTIN - share.VABB),
+    percentage.difference.VABB = ((n.VABB - n.CRISTIN) / ((n.CRISTIN + n.VABB) / 2)) * 100,
+    percentage.difference.CRISTIN = ((n.CRISTIN - n.VABB) / ((n.CRISTIN + n.VABB) / 2)) * 100,
+    percentage.error.VABB = ((n.VABB - n.CRISTIN) / n.VABB) * 100,
+    percentage.error.CRISTIN = ((n.CRISTIN - n.VABB) / n.CRISTIN) * 100
+  )
+
+# Norway
+
+E_CRISTIN.combined <- cbind(E_CRISTIN_SSH_CRISTIN, E_CRISTIN_SSH_VABB)
+names(E_CRISTIN.combined) <- c("Discipline", "n.CRISTIN", "jaccard","share.CRISTIN", "d", "n.VABB", "share.VABB")
+
+E_CRISTIN.combined <- E_CRISTIN.combined %>% 
+  select(Discipline, n.CRISTIN, n.VABB, share.CRISTIN, share.VABB) %>% # add jaccard
+  mutate(
+    share.difference.CRISTIN = (share.CRISTIN - share.VABB),
+    share.difference.VABB = (share.VABB - share.CRISTIN),
+    percentage.difference.CRISTIN = ((n.CRISTIN - n.VABB) / ((n.VABB + n.CRISTIN) / 2)) * 100,
+    percentage.difference.VABB = ((n.VABB - n.CRISTIN) / ((n.VABB + n.CRISTIN) / 2)) * 100,
+    percentage.error.CRISTIN = ((n.CRISTIN - n.VABB) / n.CRISTIN) * 100,
+    percentage.error.VABB = ((n.VABB - n.CRISTIN) / n.VABB) * 100
+  )
