@@ -772,3 +772,31 @@ E_CRISTIN.combined <- E_CRISTIN.combined %>%
     percentage.error.VABB = ((n.VABB - n.CRISTIN) / n.VABB) * 100
   ) %>% 
   mutate_if(is.numeric, ~ round(., 1))
+# Not SSH Web of Science --------------------------------------------------
+
+# Flanders
+
+WOS.notSSH.VABB <- B_VABB %>% 
+  select(Loi, Fract_count, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
+  gather(WOS.nr, WOS.OECD, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>%
+  filter(!WOS.OECD %in% cog_vars_SSH.FOS & !is.na(WOS.OECD)) %>% 
+  distinct(Loi, WOS.OECD, .keep_all = TRUE) %>% 
+  group_by(WOS.OECD) %>% 
+  summarise(sum = sum(as.double(Fract_count))) %>% 
+  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  arrange(desc(sum)) %>% 
+  head(10)
+
+# Norway
+
+WOS.notSSH.CRISTIN <- B_CRISTIN %>% 
+  select(VARBEIDLOPENR, Fract_count, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
+  gather(WOS.nr, WOS.OECD, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
+  filter(!WOS.OECD %in% cog_vars_SSH.FOS & !is.na(WOS.OECD)) %>% 
+  distinct(VARBEIDLOPENR, WOS.OECD, .keep_all = TRUE) %>% 
+  group_by(WOS.OECD) %>% 
+  summarise(sum = sum(as.double(Fract_count))) %>% 
+  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  arrange(desc(sum)) %>% 
+  head(10)
+
