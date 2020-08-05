@@ -447,3 +447,160 @@ C_CRISTIN.combined <- C_CRISTIN.combined %>%
     percentage.error.SM = ((n.SM - n.CRISTIN) / n.SM) * 100
   )
 
+# Appendix 4. Dataset D. ERIH PLUS ----------------------------------------
+
+#Flanders
+
+ERIH.onlySSH.VABB <- D_VABB %>% 
+  select(Loi, Fract_count, erih.oecd1:erih.oecd13) %>% 
+  gather(erih.OECD_nr, erih.OECD, erih.oecd1:erih.oecd13) %>%
+  filter(erih.OECD %in% cog_vars_SSH.FOS) %>% 
+  distinct(Loi, erih.OECD, .keep_all = TRUE)
+
+
+ERIH.onlySSH.VABB.distinct <- ERIH.onlySSH.VABB %>% distinct(Loi, .keep_all = TRUE)
+ERIH.onlySS.VABB <- ERIH.onlySSH.VABB %>% filter(erih.OECD %in% cog_vars_SS.FOS) %>% distinct(Loi, .keep_all = TRUE)
+ERIH.onlyH.VABB <- ERIH.onlySSH.VABB %>% filter(erih.OECD %in% cog_vars_H.FOS) %>% distinct(Loi, .keep_all = TRUE)
+
+D_VABB_SSH_ERIH <- ERIH.onlySSH.VABB %>% 
+  group_by(erih.OECD) %>% 
+  summarise(sum = sum(as.double(Fract_count)))
+
+sum <- c(sum(as.double(ERIH.onlySS.VABB$Fract_count)),
+         sum(as.double(ERIH.onlyH.VABB$Fract_count)),
+         sum(as.double(ERIH.onlySSH.VABB.distinct$Fract_count))
+)
+
+erih.OECD <- c("SS.total", "H.total", "SSH.total")
+
+totals.D.VABB.ERIH <- data.frame(erih.OECD, sum)
+
+D_VABB_SSH_ERIH <- D_VABB_SSH_ERIH %>% 
+  rbind(totals.D.VABB.ERIH) %>% 
+  mutate(share = sum / sum(as.double(ERIH.onlySSH.VABB.distinct$Fract_count)) * 100)
+
+# Norway
+
+ERIH.onlySSH.CRISTIN <- D_CRISTIN %>% 
+  select(VARBEIDLOPENR, Fract_count, erih.oecd1:erih.oecd11) %>% 
+  gather(erih.OECD.nr, erih.OECD, erih.oecd1:erih.oecd11) %>% 
+  filter(erih.OECD %in% cog_vars_SSH.FOS) %>% 
+  distinct(VARBEIDLOPENR, erih.OECD, .keep_all = TRUE)
+
+ERIH.onlySSH.CRISTIN.distinct <- ERIH.onlySSH.CRISTIN %>% distinct(VARBEIDLOPENR, .keep_all = TRUE)
+ERIH.onlySS.CRISTIN <- ERIH.onlySSH.CRISTIN %>% filter(erih.OECD %in% cog_vars_SS.FOS) %>% distinct(VARBEIDLOPENR, .keep_all = TRUE)
+ERIH.onlyH.CRISTIN <- ERIH.onlySSH.CRISTIN %>% filter(erih.OECD %in% cog_vars_H.FOS) %>% distinct(VARBEIDLOPENR, .keep_all = TRUE)
+
+D_CRISTIN_SSH_ERIH <- ERIH.onlySSH.CRISTIN %>% 
+  group_by(erih.OECD) %>% 
+  summarise(sum = sum(as.double(Fract_count)))
+
+sum <- c(sum(as.double(ERIH.onlySS.CRISTIN$Fract_count)),
+         sum(as.double(ERIH.onlyH.CRISTIN$Fract_count)),
+         sum(as.double(ERIH.onlySSH.CRISTIN.distinct$Fract_count))
+)
+
+totals.D.CRISTIN.ERIH <- data.frame(erih.OECD, sum)
+
+D_CRISTIN_SSH_ERIH <- D_CRISTIN_SSH_ERIH %>% 
+  rbind(totals.D.CRISTIN.ERIH) %>% 
+  mutate(share = sum / sum(as.double(ERIH.onlySSH.CRISTIN.distinct$Fract_count)) * 100)
+# Appendix 4. Dataset D. VABB and NSD -------------------------------------
+
+# Flanders
+
+D.onlySSH.VABB <- D_VABB %>% 
+  select(Loi, VABB.FOS1:VABB.FOS5, Fract_count) %>% #jaccard column to be added when available
+  gather(VABB.FOS_nr, VABB.FOS, VABB.FOS1:VABB.FOS5) %>%
+  filter(VABB.FOS %in% cog_vars_SSH.FOS) %>% 
+  distinct(Loi, VABB.FOS, .keep_all = TRUE)
+
+D.onlySSH.VABB.distinct <- D.onlySSH.VABB %>% distinct(Loi, .keep_all = TRUE)
+D.onlySS.VABB <- D.onlySSH.VABB %>% filter(VABB.FOS %in% cog_vars_SS.FOS) %>% distinct(Loi, .keep_all = TRUE)
+D.onlyH.VABB <- D.onlySSH.VABB %>% filter(VABB.FOS %in% cog_vars_H.FOS) %>% distinct(Loi, .keep_all = TRUE)
+
+D_VABB_SSH_VABB <- D.onlySSH.VABB %>% 
+  group_by(VABB.FOS) %>% 
+  summarise(sum = sum(as.double(Fract_count))#,
+            #jaccard = mean(as.double(jaccard_vabb_sm), na.rm = TRUE)
+            )
+
+VABB.FOS <- c("SS.total", "H.total", "SSH.total")
+
+sum <- c(sum(as.double(D.onlySS.VABB$Fract_count)),
+         sum(as.double(D.onlyH.VABB$Fract_count)),
+         sum(as.double(D.onlySSH.VABB.distinct$Fract_count)))
+
+
+#jaccard <- c(mean(as.double(D_VABB_SSH_VABB$jaccard[1:9]), na.rm = TRUE),
+ #            mean(as.double(D_VABB_SSH_VABB$jaccard[10:14]), na.rm = TRUE),
+  #           mean(as.double(D_VABB$jaccard_vabb_erih), na.rm = TRUE))
+
+#totals.D.VABB.VABB <- data.frame(VABB.FOS, sum, jaccard)
+totals.D.VABB.VABB <- data.frame(VABB.FOS, sum)
+
+D_VABB_SSH_VABB <- D_VABB_SSH_VABB %>% 
+  rbind(totals.D.VABB.VABB) %>% 
+  mutate(share = sum / sum(as.double(D.onlySSH.VABB.distinct$Fract_count)) * 100)
+
+# Norway 
+
+D_CRISTIN_SSH_CRISTIN <- D_CRISTIN %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count) %>% # jaccard column to be added when available
+  group_by(NSD.OECD) %>% 
+  summarise(sum = sum(as.double(Fract_count))#,
+            #jaccard = mean(as.double(jaccard_npu_sm), na.rm = TRUE)
+            ) %>% 
+  filter(NSD.OECD %in% cog_vars_SSH.FOS)
+
+NSD.OECD <- c("SS.total", "H.total", "SSH.total")
+
+sum <- c(sum(D_CRISTIN_SSH_CRISTIN$sum[1:9]),
+         sum(D_CRISTIN_SSH_CRISTIN$sum[10:14]),
+         sum(as.double(D_CRISTIN$Fract_count))
+)
+
+#jaccard <- c(mean(as.double(D_CRISTIN_SSH_CRISTIN$jaccard[1:9]), na.rm = TRUE),
+ #            mean(as.double(D_CRISTIN_SSH_CRISTIN$jaccard[10:14]), na.rm = TRUE),
+  #           mean(as.double(D_CRISTIN$jaccard_npu_sm), na.rm = TRUE))
+
+#totals.C.CRISTIN.CRISTIN <- data.frame(NSD.OECD, sum, jaccard)
+totals.C.CRISTIN.CRISTIN <- data.frame(NSD.OECD, sum)
+
+D_CRISTIN_SSH_CRISTIN <- D_CRISTIN_SSH_CRISTIN %>% 
+  rbind(totals.C.CRISTIN.CRISTIN) %>% 
+  mutate(share = sum / sum(as.double(D_CRISTIN$Fract_count)) * 100)
+
+# Appendix 4. Dataset D. Combined -----------------------------------------
+
+# Flanders
+
+D_VABB.combined <- cbind(D_VABB_SSH_VABB, D_VABB_SSH_ERIH)
+names(D_VABB.combined) <- c("Discipline", "n.VABB", "share.VABB", "d", "n.ERIH", "share.ERIH") # add jaccard
+
+D_VABB.combined <- D_VABB.combined %>% 
+  select(Discipline, n.VABB, n.ERIH, share.VABB, share.ERIH) %>% # add jaccard
+  mutate(
+    share.difference.VABB = (share.VABB - share.ERIH),
+    share.difference.ERIH = (share.ERIH - share.VABB),
+    percentage.difference.VABB = ((n.VABB - n.ERIH) / ((n.ERIH + n.VABB) / 2)) * 100,
+    percentage.difference.ERIH = ((n.ERIH - n.VABB) / ((n.ERIH + n.VABB) / 2)) * 100,
+    percentage.error.VABB = ((n.VABB - n.ERIH) / n.VABB) * 100,
+    percentage.error.ERIH = ((n.ERIH - n.VABB) / n.ERIH) * 100
+  )
+
+# Norway
+
+D_CRISTIN.combined <- cbind(D_CRISTIN_SSH_CRISTIN, D_CRISTIN_SSH_ERIH)
+names(D_CRISTIN.combined) <- c("Discipline", "n.CRISTIN", "share.CRISTIN", "d", "n.ERIH", "share.ERIH") # add jaccard
+
+D_CRISTIN.combined <- D_CRISTIN.combined %>% 
+  select(Discipline, n.CRISTIN, n.ERIH, share.CRISTIN, share.ERIH) %>% # add jaccard
+  mutate(
+    share.difference.CRISTIN = (share.CRISTIN - share.ERIH),
+    share.difference.ERIH = (share.ERIH - share.CRISTIN),
+    percentage.difference.CRISTIN = ((n.CRISTIN - n.ERIH) / ((n.ERIH + n.CRISTIN) / 2)) * 100,
+    percentage.difference.ERIH = ((n.ERIH - n.CRISTIN) / ((n.ERIH + n.CRISTIN) / 2)) * 100,
+    percentage.error.CRISTIN = ((n.CRISTIN - n.ERIH) / n.CRISTIN) * 100,
+    percentage.error.ERIH = ((n.ERIH - n.CRISTIN) / n.ERIH) * 100
+  )
