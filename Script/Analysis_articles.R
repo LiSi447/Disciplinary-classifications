@@ -893,3 +893,38 @@ NotSSH.VABB <- cbind(WOS.notSSH.VABB, SM.notSSH.VABB, NSD.notSSH.VABB)
 # Norway
 
 NotSSH.CRISTIN <-cbind(WOS.notSSH.CRISTIN, SM.notSSH.CRISTIN, VABB.notSSH.CRISTIN)
+
+# Export data -------------------------------------------------------------
+
+currentDate <- Sys.Date()
+
+csvFileName_1 <- paste0("./Output/FLANDERS_A_", currentDate, ".csv")
+csvFileName_2 <- paste0("./Output/FLANDERS_B_", currentDate, ".csv")
+csvFileName_3 <- paste0("./Output/FLANDERS_C_", currentDate, ".csv")
+csvFileName_4 <- paste0("./Output/FLANDERS_D_", currentDate, ".csv")
+csvFileName_5 <- paste0("./Output/FLANDERS_E_", currentDate, ".csv")
+csvFileName_6 <- paste0("./Output/FLANDERS_NOTSSH_", currentDate, ".csv")
+csvFileName_7 <- paste0("./Output/NORWAY_A_", currentDate, ".csv")
+csvFileName_8 <- paste0("./Output/NORWAY_B_", currentDate, ".csv")
+csvFileName_9 <- paste0("./Output/NORWAY_C_", currentDate, ".csv")
+csvFileName_10 <- paste0("./Output/NORWAY_D_", currentDate, ".csv")
+csvFileName_11 <- paste0("./Output/NORWAY_E_", currentDate, ".csv")
+csvFileName_12 <- paste0("./Output/NORWAY_NOTSSH_", currentDate, ".csv")
+
+write_csv(A_VABB_SSH, csvFileName_1, na = "")
+write_csv(A_CRISTIN_SSH, csvFileName_7, na = "")
+
+write_csv(B_VABB.combined, csvFileName_2, na = "")
+write_csv(B_CRISTIN.combined, csvFileName_8, na = "")
+
+write_csv(C_VABB.combined, csvFileName_3, na = "")
+write_csv(C_CRISTIN.combined, csvFileName_9, na = "")
+
+write_csv(D_VABB.combined, csvFileName_4, na = "")
+write_csv(D_CRISTIN.combined, csvFileName_10, na = "")
+
+write_csv(E_VABB.combined, csvFileName_5, na = "")
+write_csv(E_CRISTIN.combined, csvFileName_11, na = "")
+
+write_csv(NotSSH.VABB, csvFileName_6, na = "")
+write_csv(NotSSH.CRISTIN, csvFileName_12, na = "")
