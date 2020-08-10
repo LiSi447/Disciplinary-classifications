@@ -13,9 +13,6 @@ VABBserialnm <- read_csv2(
   "./Raw data/VABB/vabb7nums_edited24062019.csv", # ISSNs and ISBNs for each Loi
   col_types = cols(.default = "c"))
 
-VABBjournals_classification <- read_csv("./Raw data/VABB/VABBjournalCLAS_08072019.csv", # journals' classification
-                                        col_types = cols(.default = "c")) 
-
 All_journals <- read_csv("./Raw data/Alljournals_09072019_CLEANED.csv", # journals' classification
                          col_types = cols(.default = "c"))
 
