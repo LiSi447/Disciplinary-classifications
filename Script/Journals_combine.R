@@ -575,5 +575,22 @@ all.journals.wide8 <- all.journals.wide7 %>%
 
 # Export data -------------------------------------------------------------
 
+# Prep for export 1 -- to analyse
 
+all.journals.COMPLETE <- all.journals.wide8 %>% 
+  select(-Journal.ID.2, -Journal.ID.3)
 
+# Prep for export 2 -- to submit
+
+all.journals.COMPLETE_min <- all.journals.wide8 %>% 
+  select(TITLE, VABB_1:ERIH_14, ISSN_1:ISSN_4)
+
+# Export
+
+currentDate <- Sys.Date()
+
+csvFileName_1 <- paste0("./Output/JOURNALS_foranalysis_", currentDate, ".csv")
+csvFileName_2 <- paste0("./Output/JOURNALS_complete_", currentDate, ".csv")
+
+write_csv(all.journals.COMPLETE, csvFileName_1, na = "")
+write_csv(all.journals.COMPLETE_min, csvFileName_2, na = "")
