@@ -26,7 +26,7 @@ WOSdata <- read_csv("./Raw data/Web of Science - online/WOSdata_18042019.csv",
 
 erih <- read_csv2("./Raw data/ERIH PLUS/2020-04-03 ERIH PLUS approved journals and series.csv", col_types = cols(.default = "c")) #ERIH PLUS
 
-jaccard <- read_csv("./Raw data/Jaccard calculation/journals_jaccard.csv", col_types = cols(.default = "c")) # Jaccard
+jaccard <- read_csv("./Raw data/Jaccard calculation/journals_jaccard_20200819.csv", col_types = cols(.default = "c")) # Jaccard
 
 journaltitles.cleaned <- readxl::read_excel("./Raw data/Supplememtary material _ journal classifications combined 20191113.xlsx",
            sheet = "Sheet1",
@@ -337,27 +337,14 @@ all.journals.wide <- all.journals.wide %>%
 # Add Jaccard calculations ------------------------------------------------
 
 jaccard.min <- jaccard %>% 
-  select(title_NPU, title_VABB, jaccard_vabb_wos:jaccard_vabb_npu)
+  select(journal.ID, jaccard_vabb_wos:jaccard_vabb_npu, jaccard_vabb_erih:jaccard_npu_erih)
 
-all.journals.wide.vabb <- all.journals.wide %>% 
-  filter(!is.na(Title.VABB)) %>% 
-  left_join(jaccard.min, by = c("Title.VABB" = "title_VABB")) %>% 
-  select(-title_NPU)
+all.journals.wide2 <- all.journals.wide %>% 
+  left_join(jaccard.min, by = "journal.ID")
 
-all.journals.wide.cristin <- all.journals.wide %>% 
-  filter(!is.na(Title.NSD)) %>% 
-  left_join(jaccard.min, by = c("Title.NSD" = "title_NPU")) %>% 
-  select(-title_VABB)
-
-all.journals.wide2 <- rbind(all.journals.wide.vabb, all.journals.wide.cristin) %>% 
-  group_by(journal.ID) %>% 
-  fill(jaccard_vabb_wos:jaccard_vabb_npu, .direction = "updown") %>% 
-  ungroup() %>% 
-  distinct()  # contains duplicates
-  
 test <- all.journals.wide2 %>% 
   count(journal.ID) %>% 
-  filter(n > 1) # 27 journal IDs that have to be checked
+  filter(n > 1) # 25 journal IDs that have to be checked
 
 # Clean the journal titles ------------------------------------------------
 
@@ -507,6 +494,9 @@ duplicate.IDs.toclean <- all.journals.wide6 %>%
 
 # Incorportate errors identified manually
 
+journalIDs.cleaned.duplicates$Action <- ifelse(journalIDs.cleaned.duplicates$journal.ID == "::j::01808" & journalIDs.cleaned.duplicates$TITLE == "International Review of Applied Linguistics in Language Teaching",
+                                               "keep this", journalIDs.cleaned.duplicates$Action)
+
 remove.ids <- journalIDs.cleaned.duplicates %>% 
   filter(Action == "remove this") %>% 
   select(-Notes:-Adjust)
@@ -514,9 +504,8 @@ remove.ids <- journalIDs.cleaned.duplicates %>%
 adjust.ids <- journalIDs.cleaned.duplicates %>% 
   filter(Action == "keep this" & !is.na(Adjust))
 
-all.journals.wide7 <- anti_join(all.journals.wide6, remove.ids, by = names(all.journals.wide6)) %>% 
+all.journals.wide7 <- anti_join(all.journals.wide6, remove.ids, by = names(all.journals.wide6[c(1:10, 49)])) %>% 
   distinct(journal.ID, .keep_all = TRUE) # removes two records that could not be taken out in the previous step becase of wrong character encoding
-
 
 all.journals.wide7$Title.VABB[which(all.journals.wide7$journal.ID == "::j::01186")] <- "American Economic Journal: Economic Policy"
 all.journals.wide7$vabb.ID[which(all.journals.wide7$journal.ID == "::j::01186")] <- "vabb:j:0000661A"
@@ -538,9 +527,9 @@ all.journals.wide7$Title.erih[which(all.journals.wide7$journal.ID == "::j::01954
 all.journals.wide7$ERIH_1[which(all.journals.wide7$journal.ID == "::j::01954")] <- NA
 
 all.journals.wide7$ISSN_1[which(all.journals.wide7$journal.ID == "::j::01955")] <- NA
-all.journals.wide7$title.VABB[which(all.journals.wide7$journal.ID == "::j::01955")] <- "Nordicom Review" # VABB journal ID is not adjusted
+all.journals.wide7$Title.VABB[which(all.journals.wide7$journal.ID == "::j::01955")] <- "Nordicom Review" # VABB journal ID is not adjusted
 
-all.journals.wide7$title.VABB[which(all.journals.wide7$journal.ID == "::j::01937")] <- "Poznan Studies in Contemporary Linguistics"
+all.journals.wide7$Title.VABB[which(all.journals.wide7$journal.ID == "::j::01937")] <- "Poznan Studies in Contemporary Linguistics"
 
 all.journals.wide7$cristin.ID[which(all.journals.wide7$journal.ID == "::j::00255")] <- NA
 all.journals.wide7$Title.NSD[which(all.journals.wide7$journal.ID == "::j::00255")] <- NA
@@ -578,7 +567,7 @@ all.journals.wide8 <- all.journals.wide7 %>%
 # Prep for export 1 -- to analyse
 
 all.journals.COMPLETE <- all.journals.wide8 %>% 
-  select(-Journal.ID.2, -Journal.ID.3)
+  select(-Journal.ID.2, -Journal.ID.3) # 5 records less than before
 
 # Prep for export 2 -- to submit
 
