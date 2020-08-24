@@ -250,6 +250,7 @@ VABB_SM <- VABB_ISSNs %>%
 
 VABBdata10 <- left_join(VABBdata9, VABB_SM, by = "Loi")
 
+VABBdata10$SM.OECD <- ifelse(!is.na(VABBdata10$SM_OECD), paste0("FOS_",VABBdata10$SM_OECD), NA)
 
 # Add NSD classification --------------------------------------------------
 
@@ -582,19 +583,42 @@ FLANDERSdataMINI.v2$WOS_UT_FINAL <- ifelse(!is.na(FLANDERSdataMINI.v2$WOS_UT_01)
                                                   ifelse(!is.na(FLANDERSdataMINI.v2$WOS_UT_03), FLANDERSdataMINI.v2$WOS_UT_03,
                                                          NA)))
 
-#                                                         
-FLANDERSdata_WOS <- left_join(FLANDERSdataMINI.v2, WOSdata, by = "WOS_UT_FINAL") %>% distinct(Loi, .keep_all = TRUE)
+# Prep WOS data
+WOSdata_cleaned <- WOSdata %>% 
+  select(WOS_UT_FINAL, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
+  gather(WOS_nr, WOS, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
+  filter(!is.na(WOS)) %>% 
+  distinct(WOS_UT_FINAL, WOS) %>% 
+  group_by(WOS_UT_FINAL) %>% 
+  mutate(WOS_nr = row_number(),
+         WOS = ifelse(WOS == "PSYCHOLOGY, SOCIAL PSYCHOLOGY", "FOS5_1", WOS),
+         WOS = str_replace(WOS, "FOS", "FOS_")) %>% 
+  ungroup() %>% 
+  spread(WOS_nr, WOS)
+
+names(WOSdata_cleaned) <- c("WOS_UT_FINAL", paste0("WOS_",1:6))
+
+# Combine datasets
+
+FLANDERSdata_WOS <- left_join(FLANDERSdataMINI.v2, WOSdata_cleaned, by = "WOS_UT_FINAL") %>% distinct(Loi, .keep_all = TRUE)
 
 VABBdata13 <- left_join(VABBdata12, FLANDERSdata_WOS, by = "Loi")
 
 # Add Jaccard calculation -------------------------------------------------
 
 VABBdata14 <- left_join(VABBdata13, FL_Jaccard, by = "Loi")
+  
+# Prep dataset for Jaccard calculation ------------------------------------
+
+VABBdata_jaccard <- VABBdata14 %>% 
+  select(Loi, VABB.FOS1:VABB.FOS5, SM.OECD, NSD.OECD, erih.oecd1:erih.oecd13, WOS_1:WOS_6) 
 
 # Export data -------------------------------------------------------------
 
 currentDate <- Sys.Date()
 
 csvFileName_1 <- paste0("./Output/FLANDERS_", currentDate, ".csv")
+csvFileName_2 <- paste0("./Output/FLANDERS_articles_", currentDate, ".csv")
 
 write_csv(VABBdata14, csvFileName_1, na = "")
+write_csv(VABBdata_jaccard, csvFileName_2, na = "")
