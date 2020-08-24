@@ -201,6 +201,8 @@ CRISTIN_SM <- CRISTIN_ISSNs %>%
 
 CRISTINdata.09 <- left_join(CRISTINdata.08, CRISTIN_SM, by = "VARBEIDLOPENR")
 
+CRISTINdata.09$SM.OECD <- ifelse(!is.na(CRISTINdata.09$SM_OECD), paste0("FOS_",CRISTINdata.09$SM_OECD), NA)
+
 # Add WoS classification --------------------------------------------------
 
 NORWAYdata <- CRISTINdata.09
@@ -366,9 +368,24 @@ NORWAYdataMINI.v2$WOS_UT_FINAL <- ifelse(!is.na(NORWAYdataMINI.v2$WOS_UT_01), NO
                                          ifelse(!is.na(NORWAYdataMINI.v2$WOS_UT_02), NORWAYdataMINI.v2$WOS_UT_02,
                                                 ifelse(!is.na(NORWAYdataMINI.v2$WOS_UT_03), NORWAYdataMINI.v2$WOS_UT_03,
                                                        NA)))
+# Prep WOS data
+
+WOSdata_cleaned <- WOSdata %>% 
+  select(WOS_UT_FINAL, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
+  gather(WOS_nr, WOS, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
+  filter(!is.na(WOS)) %>% 
+  distinct(WOS_UT_FINAL, WOS) %>% 
+  group_by(WOS_UT_FINAL) %>% 
+  mutate(WOS_nr = row_number(),
+         WOS = ifelse(WOS == "PSYCHOLOGY, SOCIAL PSYCHOLOGY", "FOS5_1", WOS),
+         WOS = str_replace(WOS, "FOS", "FOS_")) %>% 
+  ungroup() %>% 
+  spread(WOS_nr, WOS)
+
+names(WOSdata_cleaned) <- c("WOS_UT_FINAL", paste0("WOS_",1:6))
 
 # Add WOS classification
-NORWAYdata_WOS <- left_join(NORWAYdataMINI.v2, WOSdata, by = "WOS_UT_FINAL")
+NORWAYdata_WOS <- left_join(NORWAYdataMINI.v2, WOSdata_cleaned, by = "WOS_UT_FINAL")
 NORWAYdata_WOS <- NORWAYdata_WOS %>% distinct(VARBEIDLOPENR, .keep_all = TRUE)
 
 CRISTINdata.10 <- left_join(CRISTINdata.09, NORWAYdata_WOS, by = "VARBEIDLOPENR")
@@ -447,6 +464,11 @@ names(CRISTIN_ISSNs_erih) <- c("VARBEIDLOPENR", "NSD Journal ID", paste0("erih.o
 CRISTINdata.12 <- left_join(CRISTINdata.11, CRISTIN_ISSNs_erih, by = "VARBEIDLOPENR")
 
 
+# Prep data for Jaccard calculation ---------------------------------------
+
+CRISTINdata.jaccard <- CRISTINdata.12 %>% 
+  select(VARBEIDLOPENR, NSD.OECD, SM.OECD, VABB.FOS1:VABB.FOS5, WOS_1:WOS_6, erih.oecd1:erih.oecd11)
+
 # Add Jaccard calculation -------------------------------------------------
 
 CRISTINdata.13 <- left_join(CRISTINdata.12, NO_Jaccard, by = "VARBEIDLOPENR")
@@ -456,5 +478,7 @@ CRISTINdata.13 <- left_join(CRISTINdata.12, NO_Jaccard, by = "VARBEIDLOPENR")
 currentDate <- Sys.Date()
 
 csvFileName_1 <- paste0("./Output/NORWAY_", currentDate, ".csv")
+csvFileName_1 <- paste0("./Output/NORWAY_articles_", currentDate, ".csv")
 
 write_csv(CRISTINdata.13, csvFileName_1, na = "")
+write_csv(CRISTINdata.jaccard, csvFileName_1, na = "")
