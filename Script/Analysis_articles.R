@@ -5,30 +5,10 @@ library(stringr)
 
 # Import data -------------------------------------------------------------
 
-VABBdata <- read_csv("./Output/FLANDERS_2020-08-03.csv", col_types = cols(.default = "c"))
-CRISTINdata <- read_csv("./Output/NORWAY_2020-08-04.csv", col_types = cols(.default = "c"))
-
+VABBdata <- read_csv("./Output/FLANDERS_2020-08-17.csv", col_types = cols(.default = "c"))
+CRISTINdata <- read_csv("./Output/NORWAY_2020-08-17.csv", col_types = cols(.default = "c"))
 
 # Prep datasets -----------------------------------------------------------
-
-WOS.vars <- c(paste0("WOS_FOSCAT_uncoded_",1:6))
-
-for (var in WOS.vars) {
-  for (i in 1:nrow(VABBdata)) {
-    (VABBdata[[var]][i] <- str_replace(VABBdata[[var]][i] ,"FOS", "FOS_"))
-    (VABBdata[[var]][i] <- str_replace(VABBdata[[var]][i], "PSYCHOLOGY, SOCIAL PSYCHOLOGY", "FOS_5_1"))
-  }
-}
-
-for (var in WOS.vars) {
-  for (i in 1:nrow(CRISTINdata)) {
-    (CRISTINdata[[var]][i] <- str_replace(CRISTINdata[[var]][i] ,"FOS", "FOS_"))
-    (CRISTINdata[[var]][i] <- str_replace(CRISTINdata[[var]][i], "PSYCHOLOGY, SOCIAL PSYCHOLOGY", "FOS_5_1"))
-  }
-}
-
-VABBdata$SM.OECD <- ifelse(!is.na(VABBdata$SM_OECD), paste0("FOS_",VABBdata$SM_OECD), NA)
-CRISTINdata$SM.OECD <- ifelse(!is.na(CRISTINdata$SM_OECD), paste0("FOS_",CRISTINdata$SM_OECD), NA)
 
 # Define SSH cats
 
@@ -53,8 +33,8 @@ cog_vars_H.FOS <- c(paste0("FOS_6_", 1:5),
 A_CRISTIN <- CRISTINdata
 A_VABB <- VABBdata
 
-B_CRISTIN <- CRISTINdata %>% filter(!is.na(WC))
-B_VABB <- VABBdata %>% filter(!is.na(WC))
+B_CRISTIN <- CRISTINdata %>% filter(!is.na(WOS_1))
+B_VABB <- VABBdata %>% filter(!is.na(WOS_1))
 
 C_CRISTIN <- CRISTINdata %>% filter(!is.na(SM_OECD))
 C_VABB <- VABBdata %>% filter(!is.na(SM_OECD))
@@ -133,8 +113,8 @@ A_CRISTIN_SSH <- A_CRISTIN_SSH %>%
 # Flanders
 
 WOS.onlySSH.VABB <- B_VABB %>% 
-  select(Loi, Fract_count, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
-  gather(WOS.nr, WOS.OECD, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
+  select(Loi, Fract_count, WOS_1:WOS_6) %>% 
+  gather(WOS.nr, WOS.OECD, WOS_1:WOS_6) %>% 
   filter(WOS.OECD %in% cog_vars_SSH.FOS) %>% 
   distinct(Loi, WOS.OECD, .keep_all = TRUE)
 
@@ -163,8 +143,8 @@ B_VABB_SSH_WOS <- B_VABB_SSH_WOS %>%
 # Norway
 
 WOS.onlySSH.CRISTIN <- B_CRISTIN %>% 
-  select(VARBEIDLOPENR, Fract_count, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
-  gather(WOS.nr, WOS.OECD, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
+  select(VARBEIDLOPENR, Fract_count, WOS_1:WOS_6) %>% 
+  gather(WOS.nr, WOS.OECD, WOS_1:WOS_6) %>% 
   filter(WOS.OECD %in% cog_vars_SSH.FOS) %>% 
   distinct(VARBEIDLOPENR, WOS.OECD, .keep_all = TRUE)
 
@@ -429,7 +409,8 @@ C_VABB.combined <- C_VABB.combined %>%
     percentage.difference.SM = ((n.SM - n.VABB) / ((n.SM + n.VABB) / 2)) * 100,
     percentage.error.VABB = ((n.VABB - n.SM) / n.VABB) * 100,
     percentage.error.SM = ((n.SM - n.VABB) / n.SM) * 100
-  )
+  ) %>% 
+  mutate_if(is.numeric, ~ round(., 1))
 
 # Norway
 
@@ -745,7 +726,7 @@ E_VABB.combined <- cbind(E_VABB_SSH_VABB, E_VABB_SSH_NSD)
 names(E_VABB.combined) <- c("Discipline", "n.VABB", "jaccard", "share.VABB", "d", "n.CRISTIN", "share.CRISTIN")
 
 E_VABB.combined <- E_VABB.combined %>% 
-  select(Discipline, n.VABB, n.CRISTIN, share.VABB, share.CRISTIN) %>% # add jaccard
+  select(Discipline, n.VABB, n.CRISTIN, share.VABB, share.CRISTIN, jaccard) %>%
   mutate(
     share.difference.VABB = (share.VABB - share.CRISTIN),
     share.difference.CRISTIN = (share.CRISTIN - share.VABB),
@@ -762,7 +743,7 @@ E_CRISTIN.combined <- cbind(E_CRISTIN_SSH_CRISTIN, E_CRISTIN_SSH_VABB)
 names(E_CRISTIN.combined) <- c("Discipline", "n.CRISTIN", "jaccard","share.CRISTIN", "d", "n.VABB", "share.VABB")
 
 E_CRISTIN.combined <- E_CRISTIN.combined %>% 
-  select(Discipline, n.CRISTIN, n.VABB, share.CRISTIN, share.VABB) %>% # add jaccard
+  select(Discipline, n.CRISTIN, n.VABB, share.CRISTIN, share.VABB, jaccard) %>%
   mutate(
     share.difference.CRISTIN = (share.CRISTIN - share.VABB),
     share.difference.VABB = (share.VABB - share.CRISTIN),
@@ -777,8 +758,8 @@ E_CRISTIN.combined <- E_CRISTIN.combined %>%
 # Flanders
 
 WOS.notSSH.VABB <- B_VABB %>% 
-  select(Loi, Fract_count, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
-  gather(WOS.nr, WOS.OECD, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>%
+  select(Loi, Fract_count, WOS_1:WOS_6) %>% 
+  gather(WOS.nr, WOS.OECD, WOS_1:WOS_6) %>%
   filter(!WOS.OECD %in% cog_vars_SSH.FOS & !is.na(WOS.OECD)) %>% 
   distinct(Loi, WOS.OECD, .keep_all = TRUE) %>% 
   group_by(WOS.OECD) %>% 
@@ -790,8 +771,8 @@ WOS.notSSH.VABB <- B_VABB %>%
 # Norway
 
 WOS.notSSH.CRISTIN <- B_CRISTIN %>% 
-  select(VARBEIDLOPENR, Fract_count, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
-  gather(WOS.nr, WOS.OECD, WOS_FOSCAT_uncoded_1:WOS_FOSCAT_uncoded_6) %>% 
+  select(VARBEIDLOPENR, Fract_count, WOS_1:WOS_6) %>% 
+  gather(WOS.nr, WOS.OECD, WOS_1:WOS_6) %>% 
   filter(!WOS.OECD %in% cog_vars_SSH.FOS & !is.na(WOS.OECD)) %>% 
   distinct(VARBEIDLOPENR, WOS.OECD, .keep_all = TRUE) %>% 
   group_by(WOS.OECD) %>% 
