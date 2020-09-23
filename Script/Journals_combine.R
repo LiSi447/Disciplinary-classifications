@@ -537,6 +537,7 @@ all.journals.wide7$NPU[which(all.journals.wide7$journal.ID == "::j::00255")] <- 
 all.journals.wide7$erih.id[which(all.journals.wide7$journal.ID == "::j::00255")] <- NA
 all.journals.wide7$ERIH_1[which(all.journals.wide7$journal.ID == "::j::00255")] <- NA
 all.journals.wide7$Title.erih[which(all.journals.wide7$journal.ID == "::j::00255")] <- NA
+all.journals.wide7$ISSN_2[which(all.journals.wide7$journal.ID == "::j::00255")] <- NA
 
 # check ISSNs that appear with multiple journal IDs
 
