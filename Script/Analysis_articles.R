@@ -5,8 +5,8 @@ library(stringr)
 
 # Import data -------------------------------------------------------------
 
-VABBdata <- read_csv("./Output/FLANDERS_2020-08-17.csv", col_types = cols(.default = "c"))
-CRISTINdata <- read_csv("./Output/NORWAY_2020-08-17.csv", col_types = cols(.default = "c"))
+VABBdata <- read_csv("./Output/FLANDERS_2020-08-24.csv", col_types = cols(.default = "c"))
+CRISTINdata <- read_csv("./Output/NORWAY_2020-08-24.csv", col_types = cols(.default = "c"))
 
 # Prep datasets -----------------------------------------------------------
 
@@ -26,6 +26,8 @@ cog_vars_H.FOS <- c(paste0("FOS_6_", 1:5),
                     paste0("FOS_6_2_", 1:2),
                     paste0("FOS_6_3_", 1:2))
 
+SSH.codes2 <- c(paste0("FOS_5_",1:9), paste0("FOS_6_",1:5))
+
 # Table 1. Overview of datasets -------------------------------------------
 
 # Generate datasets
@@ -44,7 +46,6 @@ D_VABB <- VABBdata %>% filter(!is.na(erih.oecd1))
 
 E_CRISTIN <- CRISTINdata %>% filter(!is.na(VABB.FOS1))
 E_VABB <- VABBdata %>% filter(!is.na(NSD.OECD))
-
 
 # Appendix 1. Datasets A --------------------------------------------------
 
@@ -76,7 +77,7 @@ totals.A.VABB <- data.frame(VABB.FOS, sum)
 A_VABB_SSH <- A_VABB_SSH %>% 
   rbind(totals.A.VABB) %>% 
   mutate(share = sum / sum(as.double(A.VABB.SSH.only.distinct$Fract_count)) * 100) %>% 
-  mutate_if(is.numeric, ~ round(., 1))
+  mutate_if(is.numeric, ~ round(., 2))
 
 # Norway
 
@@ -106,7 +107,7 @@ totals.A.CRISTIN <- data.frame(NSD.OECD, sum)
 A_CRISTIN_SSH <- A_CRISTIN_SSH %>% 
   rbind(totals.A.CRISTIN) %>% 
   mutate(share = sum / sum(as.double(A_CRISTIN$Fract_count)) * 100) %>% 
-  mutate_if(is.numeric, ~ round(., 1))
+  mutate_if(is.numeric, ~ round(., 2))
   
 # Appendix 2. Dataset B WoS -----------------------------------------------
 
@@ -182,52 +183,109 @@ B.onlySSH.VABB.distinct <- B.onlySSH.VABB %>% distinct(Loi, .keep_all = TRUE)
 B.onlySS.VABB <- B.onlySSH.VABB %>% filter(VABB.FOS %in% cog_vars_SS.FOS) %>% distinct(Loi, .keep_all = TRUE)
 B.onlyH.VABB <- B.onlySSH.VABB %>% filter(VABB.FOS %in% cog_vars_H.FOS) %>% distinct(Loi, .keep_all = TRUE)
 
+# by discipline
+
 B_VABB_SSH_VABB <- B.onlySSH.VABB %>% 
   group_by(VABB.FOS) %>% 
   summarise(sum = sum(as.double(Fract_count)),
-            jaccard = mean(as.double(jaccard_vabb_wos), na.rm = TRUE))
+            jaccard.mean = mean(as.double(jaccard_vabb_wos), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_wos), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_wos), na.rm = TRUE))
 
-VABB.FOS <- c("SS.total", "H.total", "SSH.total")
+# only SS
+B_VABB_SS_VABB <- B.onlySS.VABB %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_wos), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_wos), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_wos), na.rm = TRUE)) %>% 
+  mutate(
+    VABB.FOS = "Social sciences"
+  ) %>% 
+  select(VABB.FOS, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-sum <- c(sum(as.double(B.onlySS.VABB$Fract_count)),
-         sum(as.double(B.onlyH.VABB$Fract_count)),
-         sum(as.double(B.onlySSH.VABB.distinct$Fract_count)))
+# only H
+B_VABB_H_VABB <- B.onlyH.VABB %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_wos), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_wos), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_wos), na.rm = TRUE)) %>% 
+  mutate(
+    VABB.FOS = "Humanities"
+  ) %>% 
+  select(VABB.FOS, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
+# SSH totals
 
-jaccard <- c(mean(as.double(B_VABB_SSH_VABB$jaccard[1:9]), na.rm = TRUE),
-            mean(as.double(B_VABB_SSH_VABB$jaccard[10:14]), na.rm = TRUE),
-            mean(as.double(B_VABB$jaccard_vabb_wos), na.rm = TRUE))
+B_VABB_SSH_VABB.total <- B.onlySSH.VABB.distinct %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_wos), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_wos), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_wos), na.rm = TRUE)) %>% 
+  mutate(
+    VABB.FOS = "Total"
+  ) %>% 
+  select(VABB.FOS, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-totals.B.VABB.VABB <- data.frame(VABB.FOS, sum, jaccard)
 
 B_VABB_SSH_VABB <- B_VABB_SSH_VABB %>% 
-  rbind(totals.B.VABB.VABB) %>% 
+  rbind(B_VABB_SS_VABB, B_VABB_H_VABB, B_VABB_SSH_VABB.total) %>% 
   mutate(share = sum / sum(as.double(B.onlySSH.VABB.distinct$Fract_count)) * 100)
 
 # Norway
 
+# by discipline
 B_CRISTIN_SSH_CRISTIN <- B_CRISTIN %>% 
   select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_npu_wos) %>%
   group_by(NSD.OECD) %>% 
   summarise(sum = sum(as.double(Fract_count)),
-            jaccard = mean(as.double(jaccard_npu_wos), na.rm = TRUE)) %>% 
+            jaccard.mean = mean(as.double(jaccard_npu_wos), na.rm = TRUE),
+            jaccard.median =  median(as.double(jaccard_npu_wos), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_npu_wos), na.rm = TRUE)) %>% 
   filter(NSD.OECD %in% cog_vars_SSH.FOS)
 
-NSD.OECD <- c("SS.total", "H.total", "SSH.total")
+# SS only
+B_CRISTIN_SS_CRISTIN <- B_CRISTIN %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_npu_wos) %>%
+  filter(NSD.OECD %in% cog_vars_SS.FOS) %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_npu_wos), na.rm = TRUE),
+            jaccard.median =  median(as.double(jaccard_npu_wos), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_npu_wos), na.rm = TRUE)) %>% 
+  mutate(
+    NSD.OECD = "Social sciences"
+  ) %>% 
+  select(NSD.OECD, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-sum <- c(sum(B_CRISTIN_SSH_CRISTIN$sum[1:9]),
-         sum(B_CRISTIN_SSH_CRISTIN$sum[10:14]),
-         sum(as.double(B_CRISTIN$Fract_count))
-)
+# H only
+B_CRISTIN_H_CRISTIN <- B_CRISTIN %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_npu_wos) %>%
+  filter(NSD.OECD %in% cog_vars_H.FOS) %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_npu_wos), na.rm = TRUE),
+            jaccard.median =  median(as.double(jaccard_npu_wos), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_npu_wos), na.rm = TRUE)) %>% 
+  mutate(
+    NSD.OECD = "Humanities"
+  ) %>% 
+  select(NSD.OECD, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-jaccard <- c(mean(as.double(B_CRISTIN_SSH_CRISTIN$jaccard[1:9]), na.rm = TRUE),
-             mean(as.double(B_CRISTIN_SSH_CRISTIN$jaccard[10:14]), na.rm = TRUE),
-             mean(as.double(B_CRISTIN$jaccard_npu_wos), na.rm = TRUE))
+# SSH totals
 
-totals.B.CRISTIN.CRISTIN <- data.frame(NSD.OECD, sum, jaccard)
+B_CRISTIN_SSH_CRISTIN.total <- B_CRISTIN %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_npu_wos) %>%
+  filter(NSD.OECD %in% cog_vars_SSH.FOS) %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_npu_wos), na.rm = TRUE),
+            jaccard.median =  median(as.double(jaccard_npu_wos), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_npu_wos), na.rm = TRUE)) %>% 
+  mutate(
+    NSD.OECD = "Total"
+  ) %>% 
+  select(NSD.OECD, sum, jaccard.mean, jaccard.median, jaccard.sd)
+#
 
 B_CRISTIN_SSH_CRISTIN <- B_CRISTIN_SSH_CRISTIN %>% 
-  rbind(totals.B.CRISTIN.CRISTIN) %>% 
+  rbind(B_CRISTIN_SS_CRISTIN, B_CRISTIN_H_CRISTIN, B_CRISTIN_SSH_CRISTIN.total) %>% 
   mutate(share = sum / sum(as.double(B_CRISTIN$Fract_count)) * 100)
 
 
@@ -236,36 +294,36 @@ B_CRISTIN_SSH_CRISTIN <- B_CRISTIN_SSH_CRISTIN %>%
 # Flanders
 
 B_VABB.combined <- cbind(B_VABB_SSH_VABB, B_VABB_SSH_WOS)
-names(B_VABB.combined) <- c("Discipline", "n.VABB", "jaccard", "share.VABB", "d", "n.WOS", "share.WOS")
+names(B_VABB.combined) <- c("Discipline", "n.VABB", "jaccard.mean", "jaccard.median", "jaccard.sd", "share.VABB", "d", "n.WOS", "share.WOS")
 
 B_VABB.combined <- B_VABB.combined %>% 
-  select(Discipline, n.VABB, n.WOS, share.VABB, share.WOS, jaccard) %>% 
+  select(Discipline, n.VABB, n.WOS, share.VABB, share.WOS, jaccard.mean, jaccard.median, jaccard.sd) %>% 
   mutate(
     share.difference.VABB = (share.VABB - share.WOS),
     share.difference.WOS = (share.WOS - share.VABB),
     percentage.difference.VABB = ((n.VABB - n.WOS) / ((n.WOS + n.VABB) / 2)) * 100,
     percentage.difference.WOS = ((n.WOS - n.VABB) / ((n.WOS + n.VABB) / 2)) * 100,
-    percentage.error.VABB = ((n.VABB - n.WOS) / n.VABB) * 100,
-    percentage.error.WOS = ((n.WOS - n.VABB) / n.WOS) * 100
+    percentage.error.VABB = ((n.WOS - n.VABB) / n.VABB) * 100,
+    percentage.error.WOS = ((n.VABB - n.WOS) / n.WOS) * 100
   ) %>% 
-  mutate_if(is.numeric, ~ round(., 1))
+  mutate_if(is.numeric, ~ round(., 2))
 
 # Norway
 
 B_CRISTIN.combined <- cbind(B_CRISTIN_SSH_CRISTIN, B_CRISTIN_SSH_WOS)
-names(B_CRISTIN.combined) <- c("Discipline", "n.CRISTIN", "jaccard", "share.CRISTIN", "d", "n.WOS", "share.WOS")
+names(B_CRISTIN.combined) <- c("Discipline", "n.CRISTIN", "jaccard.mean", "jaccard.median", "jaccard.sd", "share.CRISTIN", "d", "n.WOS", "share.WOS")
 
 B_CRISTIN.combined <- B_CRISTIN.combined %>% 
-  select(Discipline, n.CRISTIN, n.WOS, share.CRISTIN, share.WOS, jaccard) %>% 
+  select(Discipline, n.CRISTIN, n.WOS, share.CRISTIN, share.WOS, jaccard.mean, jaccard.median, jaccard.sd) %>% 
   mutate(
     share.difference.CRISTIN = (share.CRISTIN - share.WOS),
     share.difference.WOS = (share.WOS - share.CRISTIN),
     percentage.difference.CRISTIN = ((n.CRISTIN - n.WOS) / ((n.WOS + n.CRISTIN) / 2)) * 100,
     percentage.difference.WOS = ((n.WOS - n.CRISTIN) / ((n.WOS + n.CRISTIN) / 2)) * 100,
-    percentage.error.CRISTIN = ((n.CRISTIN - n.WOS) / n.CRISTIN) * 100,
-    percentage.error.WOS = ((n.WOS - n.CRISTIN) / n.WOS) * 100
+    percentage.error.CRISTIN = ((n.WOS - n.CRISTIN) / n.CRISTIN) * 100,
+    percentage.error.WOS = ((n.CRISTIN - n.WOS) / n.WOS) * 100
   ) %>% 
-  mutate_if(is.numeric, ~ round(., 1))
+  mutate_if(is.numeric, ~ round(., 2))
 
 # Appendix 3. Dataset C. Science-Metrix -----------------------------------
 
@@ -340,52 +398,102 @@ C.onlySSH.VABB.distinct <- C.onlySSH.VABB %>% distinct(Loi, .keep_all = TRUE)
 C.onlySS.VABB <- C.onlySSH.VABB %>% filter(VABB.FOS %in% cog_vars_SS.FOS) %>% distinct(Loi, .keep_all = TRUE)
 C.onlyH.VABB <- C.onlySSH.VABB %>% filter(VABB.FOS %in% cog_vars_H.FOS) %>% distinct(Loi, .keep_all = TRUE)
 
+# by discipline
 C_VABB_SSH_VABB <- C.onlySSH.VABB %>% 
   group_by(VABB.FOS) %>% 
   summarise(sum = sum(as.double(Fract_count)),
-            jaccard = mean(as.double(jaccard_vabb_sm), na.rm = TRUE))
+            jaccard.mean = mean(as.double(jaccard_vabb_sm), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_sm), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_sm), na.rm = TRUE))
 
-VABB.FOS <- c("SS.total", "H.total", "SSH.total")
+# SS only
+C_VABB_SS_VABB <- C.onlySS.VABB %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_sm), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_sm), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_sm), na.rm = TRUE)) %>% 
+  mutate(
+    VABB.FOS = "Social sciences"
+  ) %>% 
+  select(VABB.FOS, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-sum <- c(sum(as.double(C.onlySS.VABB$Fract_count)),
-         sum(as.double(C.onlyH.VABB$Fract_count)),
-         sum(as.double(C.onlySSH.VABB.distinct$Fract_count)))
 
+# H only
+C_VABB_H_VABB <- C.onlyH.VABB %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_sm), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_sm), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_sm), na.rm = TRUE)) %>% 
+  mutate(
+    VABB.FOS = "Humanities"
+  ) %>% 
+  select(VABB.FOS, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-jaccard <- c(mean(as.double(C_VABB_SSH_VABB$jaccard[1:9]), na.rm = TRUE),
-             mean(as.double(C_VABB_SSH_VABB$jaccard[10:14]), na.rm = TRUE),
-             mean(as.double(C_VABB$jaccard_vabb_wos), na.rm = TRUE))
+# SSH totals
+C_VABB_SSH_VABB.total <- C.onlySSH.VABB.distinct %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_sm), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_sm), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_sm), na.rm = TRUE)) %>% 
+  mutate(
+    VABB.FOS = "Total"
+  ) %>% 
+  select(VABB.FOS, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-totals.C.VABB.VABB <- data.frame(VABB.FOS, sum, jaccard)
 
 C_VABB_SSH_VABB <- C_VABB_SSH_VABB %>% 
-  rbind(totals.C.VABB.VABB) %>% 
+  rbind(C_VABB_SS_VABB, C_VABB_H_VABB, C_VABB_SSH_VABB.total) %>% 
   mutate(share = sum / sum(as.double(C.onlySSH.VABB.distinct$Fract_count)) * 100)
 
 # Norway
 
+# by discipline
 C_CRISTIN_SSH_CRISTIN <- C_CRISTIN %>% 
   select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_npu_sm) %>%
   group_by(NSD.OECD) %>% 
   summarise(sum = sum(as.double(Fract_count)),
-            jaccard = mean(as.double(jaccard_npu_sm), na.rm = TRUE)) %>% 
+            jaccard.mean = mean(as.double(jaccard_npu_sm), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_npu_sm), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_npu_sm), na.rm = TRUE)) %>% 
   filter(NSD.OECD %in% cog_vars_SSH.FOS)
 
-NSD.OECD <- c("SS.total", "H.total", "SSH.total")
+# SS
+C_CRISTIN_SS_CRISTIN <- C_CRISTIN %>% 
+  filter(NSD.OECD %in% cog_vars_SS.FOS) %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_npu_sm) %>%
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_npu_sm), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_npu_sm), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_npu_sm), na.rm = TRUE)) %>% 
+  mutate(NSD.OECD = "Social sciences") %>% 
+  select(NSD.OECD, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-sum <- c(sum(C_CRISTIN_SSH_CRISTIN$sum[1:9]),
-         sum(C_CRISTIN_SSH_CRISTIN$sum[10:14]),
-         sum(as.double(C_CRISTIN$Fract_count))
-)
+# H
+C_CRISTIN_H_CRISTIN <- C_CRISTIN %>% 
+  filter(NSD.OECD %in% cog_vars_H.FOS) %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_npu_sm) %>%
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_npu_sm), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_npu_sm), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_npu_sm), na.rm = TRUE)) %>% 
+  mutate(NSD.OECD = "Humanities") %>% 
+  select(NSD.OECD, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-jaccard <- c(mean(as.double(C_CRISTIN_SSH_CRISTIN$jaccard[1:9]), na.rm = TRUE),
-             mean(as.double(C_CRISTIN_SSH_CRISTIN$jaccard[10:14]), na.rm = TRUE),
-             mean(as.double(C_CRISTIN$jaccard_npu_sm), na.rm = TRUE))
 
-totals.C.CRISTIN.CRISTIN <- data.frame(NSD.OECD, sum, jaccard)
+# SSH total
+C_CRISTIN_SSH_CRISTIN.total <- C_CRISTIN %>% 
+  filter(NSD.OECD %in% cog_vars_SSH.FOS) %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_npu_sm) %>%
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_npu_sm), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_npu_sm), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_npu_sm), na.rm = TRUE)) %>% 
+  mutate(NSD.OECD = "Total") %>% 
+  select(NSD.OECD, sum, jaccard.mean, jaccard.median, jaccard.sd)
+
 
 C_CRISTIN_SSH_CRISTIN <- C_CRISTIN_SSH_CRISTIN %>% 
-  rbind(totals.C.CRISTIN.CRISTIN) %>% 
+  rbind(C_CRISTIN_SS_CRISTIN, C_CRISTIN_H_CRISTIN, C_CRISTIN_SSH_CRISTIN.total) %>% 
   mutate(share = sum / sum(as.double(C_CRISTIN$Fract_count)) * 100)
 
 # Appendix 3. Dataset C. Combined -----------------------------------------
@@ -398,19 +506,19 @@ names(dat.dum) <- names(C_VABB_SSH_VABB)
 C_VABB_SSH_VABB <- rbind(dat.dum, C_VABB_SSH_VABB)
 
 C_VABB.combined <- cbind(C_VABB_SSH_VABB, C_VABB_SSH_SM)
-names(C_VABB.combined) <- c("Discipline", "n.VABB", "jaccard", "share.VABB", "d", "n.SM", "share.SM")
+names(C_VABB.combined) <- c("Discipline", "n.VABB", "jaccard.mean", "jaccard.median", "jaccard.sd", "share.VABB", "d", "n.SM", "share.SM")
 
 C_VABB.combined <- C_VABB.combined %>% 
-  select(Discipline, n.VABB, n.SM, share.VABB, share.SM, jaccard) %>% 
+  select(Discipline, n.VABB, n.SM, share.VABB, share.SM, jaccard.mean, jaccard.median, jaccard.sd) %>% 
   mutate(
     share.difference.VABB = (share.VABB - share.SM),
     share.difference.SM = (share.SM - share.VABB),
     percentage.difference.VABB = ((n.VABB - n.SM) / ((n.SM + n.VABB) / 2)) * 100,
     percentage.difference.SM = ((n.SM - n.VABB) / ((n.SM + n.VABB) / 2)) * 100,
-    percentage.error.VABB = ((n.VABB - n.SM) / n.VABB) * 100,
-    percentage.error.SM = ((n.SM - n.VABB) / n.SM) * 100
+    percentage.error.VABB = ((n.SM - n.VABB) / n.VABB) * 100,
+    percentage.error.SM = ((n.VABB - n.SM) / n.SM) * 100
   ) %>% 
-  mutate_if(is.numeric, ~ round(., 1))
+  mutate_if(is.numeric, ~ round(., 2))
 
 # Norway
 
@@ -419,19 +527,19 @@ names(dat.dum) <- names(C_CRISTIN_SSH_CRISTIN)
 C_CRISTIN_SSH_CRISTIN <- rbind(dat.dum, C_CRISTIN_SSH_CRISTIN)
 
 C_CRISTIN.combined <- cbind(C_CRISTIN_SSH_CRISTIN, C_CRISTIN_SSH_SM)
-names(C_CRISTIN.combined) <- c("Discipline", "n.CRISTIN", "jaccard", "share.CRISTIN", "d", "n.SM", "share.SM")
+names(C_CRISTIN.combined) <- c("Discipline", "n.CRISTIN", "jaccard.mean", "jaccard.median", "jaccard.sd", "share.CRISTIN", "d", "n.SM", "share.SM")
 
 C_CRISTIN.combined <- C_CRISTIN.combined %>% 
-  select(Discipline, n.CRISTIN, n.SM, share.CRISTIN, share.SM, jaccard) %>% 
+  select(Discipline, n.CRISTIN, n.SM, share.CRISTIN, share.SM, jaccard.mean, jaccard.median, jaccard.sd) %>% 
   mutate(
     share.difference.CRISTIN = (share.CRISTIN - share.SM),
     share.difference.SM = (share.SM - share.CRISTIN),
     percentage.difference.CRISTIN = ((n.CRISTIN - n.SM) / ((n.SM + n.CRISTIN) / 2)) * 100,
     percentage.difference.SM = ((n.SM - n.CRISTIN) / ((n.SM + n.CRISTIN) / 2)) * 100,
-    percentage.error.CRISTIN = ((n.CRISTIN - n.SM) / n.CRISTIN) * 100,
-    percentage.error.SM = ((n.SM - n.CRISTIN) / n.SM) * 100
+    percentage.error.CRISTIN = ((n.SM- n.CRISTIN) / n.CRISTIN) * 100,
+    percentage.error.SM = ((n.CRISTIN - n.SM) / n.SM) * 100
   ) %>% 
-  mutate_if(is.numeric, ~ round(., 1))
+  mutate_if(is.numeric, ~ round(., 2))
 
 # Appendix 4. Dataset D. ERIH PLUS ----------------------------------------
 
@@ -491,12 +599,13 @@ totals.D.CRISTIN.ERIH <- data.frame(erih.OECD, sum)
 D_CRISTIN_SSH_ERIH <- D_CRISTIN_SSH_ERIH %>% 
   rbind(totals.D.CRISTIN.ERIH) %>% 
   mutate(share = sum / sum(as.double(ERIH.onlySSH.CRISTIN.distinct$Fract_count)) * 100)
+
 # Appendix 4. Dataset D. VABB and NSD -------------------------------------
 
 # Flanders
 
 D.onlySSH.VABB <- D_VABB %>% 
-  select(Loi, VABB.FOS1:VABB.FOS5, Fract_count) %>% #jaccard column to be added when available
+  select(Loi, VABB.FOS1:VABB.FOS5, Fract_count, jaccard_vabb_erih) %>% 
   gather(VABB.FOS_nr, VABB.FOS, VABB.FOS1:VABB.FOS5) %>%
   filter(VABB.FOS %in% cog_vars_SSH.FOS) %>% 
   distinct(Loi, VABB.FOS, .keep_all = TRUE)
@@ -505,56 +614,108 @@ D.onlySSH.VABB.distinct <- D.onlySSH.VABB %>% distinct(Loi, .keep_all = TRUE)
 D.onlySS.VABB <- D.onlySSH.VABB %>% filter(VABB.FOS %in% cog_vars_SS.FOS) %>% distinct(Loi, .keep_all = TRUE)
 D.onlyH.VABB <- D.onlySSH.VABB %>% filter(VABB.FOS %in% cog_vars_H.FOS) %>% distinct(Loi, .keep_all = TRUE)
 
+# by discipline
 D_VABB_SSH_VABB <- D.onlySSH.VABB %>% 
   group_by(VABB.FOS) %>% 
-  summarise(sum = sum(as.double(Fract_count))#,
-            #jaccard = mean(as.double(jaccard_vabb_sm), na.rm = TRUE)
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_erih), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_erih), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_erih), na.rm = TRUE)
             )
 
-VABB.FOS <- c("SS.total", "H.total", "SSH.total")
+# SS 
+D_VABB_SS_VABB <- D.onlySS.VABB%>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_erih), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_erih), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_erih), na.rm = TRUE)
+  ) %>% 
+  mutate(VABB.FOS = "Social sciences")  %>% 
+  select(VABB.FOS, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-sum <- c(sum(as.double(D.onlySS.VABB$Fract_count)),
-         sum(as.double(D.onlyH.VABB$Fract_count)),
-         sum(as.double(D.onlySSH.VABB.distinct$Fract_count)))
+# H 
+D_VABB_H_VABB <- D.onlyH.VABB%>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_erih), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_erih), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_erih), na.rm = TRUE)
+  ) %>% 
+  mutate(VABB.FOS = "Humanities")  %>% 
+  select(VABB.FOS, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-
-#jaccard <- c(mean(as.double(D_VABB_SSH_VABB$jaccard[1:9]), na.rm = TRUE),
- #            mean(as.double(D_VABB_SSH_VABB$jaccard[10:14]), na.rm = TRUE),
-  #           mean(as.double(D_VABB$jaccard_vabb_erih), na.rm = TRUE))
-
-#totals.D.VABB.VABB <- data.frame(VABB.FOS, sum, jaccard)
-totals.D.VABB.VABB <- data.frame(VABB.FOS, sum)
+# SSH total
+D_VABB_SSH_VABB.total <- D.onlySSH.VABB.distinct %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_erih), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_erih), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_erih), na.rm = TRUE)
+  ) %>% 
+  mutate(VABB.FOS = "Total")  %>% 
+  select(VABB.FOS, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
 D_VABB_SSH_VABB <- D_VABB_SSH_VABB %>% 
-  rbind(totals.D.VABB.VABB) %>% 
+  rbind(D_VABB_SS_VABB, D_VABB_H_VABB, D_VABB_SSH_VABB.total) %>% 
   mutate(share = sum / sum(as.double(D.onlySSH.VABB.distinct$Fract_count)) * 100)
 
 # Norway 
 
+# by discipline
 D_CRISTIN_SSH_CRISTIN <- D_CRISTIN %>% 
-  select(VARBEIDLOPENR, NSD.OECD, Fract_count) %>% # jaccard column to be added when available
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_npu_erih) %>%
   group_by(NSD.OECD) %>% 
-  summarise(sum = sum(as.double(Fract_count))#,
-            #jaccard = mean(as.double(jaccard_npu_sm), na.rm = TRUE)
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_npu_erih), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_npu_erih), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_npu_erih), na.rm = TRUE)
             ) %>% 
   filter(NSD.OECD %in% cog_vars_SSH.FOS)
 
-NSD.OECD <- c("SS.total", "H.total", "SSH.total")
+# SS
+D_CRISTIN_SS_CRISTIN <- D_CRISTIN %>% 
+  filter(NSD.OECD %in% cog_vars_SS.FOS) %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_npu_erih) %>%
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_npu_erih), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_npu_erih), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_npu_erih), na.rm = TRUE)
+  ) %>% 
+  mutate(
+    NSD.OECD = "Social sciences"
+  ) %>% 
+  select(NSD.OECD, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-sum <- c(sum(D_CRISTIN_SSH_CRISTIN$sum[1:9]),
-         sum(D_CRISTIN_SSH_CRISTIN$sum[10:14]),
-         sum(as.double(D_CRISTIN$Fract_count))
-)
+# H
+D_CRISTIN_H_CRISTIN <- D_CRISTIN %>% 
+  filter(NSD.OECD %in% cog_vars_H.FOS) %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_npu_erih) %>%
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_npu_erih), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_npu_erih), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_npu_erih), na.rm = TRUE)
+  ) %>% 
+  mutate(
+    NSD.OECD = "Humanities"
+  ) %>% 
+  select(NSD.OECD, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-#jaccard <- c(mean(as.double(D_CRISTIN_SSH_CRISTIN$jaccard[1:9]), na.rm = TRUE),
- #            mean(as.double(D_CRISTIN_SSH_CRISTIN$jaccard[10:14]), na.rm = TRUE),
-  #           mean(as.double(D_CRISTIN$jaccard_npu_sm), na.rm = TRUE))
 
-#totals.C.CRISTIN.CRISTIN <- data.frame(NSD.OECD, sum, jaccard)
-totals.C.CRISTIN.CRISTIN <- data.frame(NSD.OECD, sum)
+# SSH total
+D_CRISTIN_SSH_CRISTIN.total <- D_CRISTIN %>% 
+  filter(NSD.OECD %in% cog_vars_SSH.FOS) %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_npu_erih) %>%
+    summarise(sum = sum(as.double(Fract_count)),
+              jaccard.mean = mean(as.double(jaccard_npu_erih), na.rm = TRUE),
+              jaccard.median = median(as.double(jaccard_npu_erih), na.rm = TRUE),
+              jaccard.sd = sd(as.double(jaccard_npu_erih), na.rm = TRUE)
+    ) %>% 
+    mutate(
+      NSD.OECD = "Total"
+    ) %>% 
+    select(NSD.OECD, sum, jaccard.mean, jaccard.median, jaccard.sd)
+
 
 D_CRISTIN_SSH_CRISTIN <- D_CRISTIN_SSH_CRISTIN %>% 
-  rbind(totals.C.CRISTIN.CRISTIN) %>% 
+  rbind(D_CRISTIN_SS_CRISTIN, D_CRISTIN_H_CRISTIN, D_CRISTIN_SSH_CRISTIN.total) %>% 
   mutate(share = sum / sum(as.double(D_CRISTIN$Fract_count)) * 100)
 
 # Appendix 4. Dataset D. Combined -----------------------------------------
@@ -562,36 +723,36 @@ D_CRISTIN_SSH_CRISTIN <- D_CRISTIN_SSH_CRISTIN %>%
 # Flanders
 
 D_VABB.combined <- cbind(D_VABB_SSH_VABB, D_VABB_SSH_ERIH)
-names(D_VABB.combined) <- c("Discipline", "n.VABB", "share.VABB", "d", "n.ERIH", "share.ERIH") # add jaccard
+names(D_VABB.combined) <- c("Discipline", "n.VABB", "jaccard.mean", "jaccard.median", "jaccard.sd", "share.VABB", "d", "n.ERIH", "share.ERIH")
 
 D_VABB.combined <- D_VABB.combined %>% 
-  select(Discipline, n.VABB, n.ERIH, share.VABB, share.ERIH) %>% # add jaccard
+  select(Discipline, n.VABB, n.ERIH, share.VABB, share.ERIH, jaccard.mean, jaccard.median, jaccard.sd) %>%
   mutate(
     share.difference.VABB = (share.VABB - share.ERIH),
     share.difference.ERIH = (share.ERIH - share.VABB),
     percentage.difference.VABB = ((n.VABB - n.ERIH) / ((n.ERIH + n.VABB) / 2)) * 100,
     percentage.difference.ERIH = ((n.ERIH - n.VABB) / ((n.ERIH + n.VABB) / 2)) * 100,
-    percentage.error.VABB = ((n.VABB - n.ERIH) / n.VABB) * 100,
-    percentage.error.ERIH = ((n.ERIH - n.VABB) / n.ERIH) * 100
+    percentage.error.VABB = ((n.ERIH- n.VABB) / n.VABB) * 100,
+    percentage.error.ERIH = ((n.VABB - n.ERIH) / n.ERIH) * 100
   ) %>% 
-  mutate_if(is.numeric, ~ round(., 1))
+  mutate_if(is.numeric, ~ round(., 2))
 
 # Norway
 
 D_CRISTIN.combined <- cbind(D_CRISTIN_SSH_CRISTIN, D_CRISTIN_SSH_ERIH)
-names(D_CRISTIN.combined) <- c("Discipline", "n.CRISTIN", "share.CRISTIN", "d", "n.ERIH", "share.ERIH") # add jaccard
+names(D_CRISTIN.combined) <- c("Discipline", "n.CRISTIN", "jaccard.mean", "jaccard.median", "jaccard.sd", "share.CRISTIN", "d", "n.ERIH", "share.ERIH")
 
 D_CRISTIN.combined <- D_CRISTIN.combined %>% 
-  select(Discipline, n.CRISTIN, n.ERIH, share.CRISTIN, share.ERIH) %>% # add jaccard
+  select(Discipline, n.CRISTIN, n.ERIH, share.CRISTIN, share.ERIH, jaccard.mean, jaccard.median, jaccard.sd) %>% 
   mutate(
     share.difference.CRISTIN = (share.CRISTIN - share.ERIH),
     share.difference.ERIH = (share.ERIH - share.CRISTIN),
     percentage.difference.CRISTIN = ((n.CRISTIN - n.ERIH) / ((n.ERIH + n.CRISTIN) / 2)) * 100,
     percentage.difference.ERIH = ((n.ERIH - n.CRISTIN) / ((n.ERIH + n.CRISTIN) / 2)) * 100,
-    percentage.error.CRISTIN = ((n.CRISTIN - n.ERIH) / n.CRISTIN) * 100,
-    percentage.error.ERIH = ((n.ERIH - n.CRISTIN) / n.ERIH) * 100
+    percentage.error.CRISTIN = ((n.ERIH - n.CRISTIN) / n.CRISTIN) * 100,
+    percentage.error.ERIH = ((n.CRISTIN - n.ERIH) / n.ERIH) * 100
   ) %>% 
-  mutate_if(is.numeric, ~ round(., 1))
+  mutate_if(is.numeric, ~ round(., 2))
 
 # Appendix 5. Dataset E. VABB and NSD. opposite ---------------------------
 
@@ -666,93 +827,139 @@ E.onlySSH.VABB.distinct <- E.onlySSH.VABB %>% distinct(Loi, .keep_all = TRUE)
 E.onlySS.VABB <- E.onlySSH.VABB %>% filter(VABB.FOS %in% cog_vars_SS.FOS) %>% distinct(Loi, .keep_all = TRUE)
 E.onlyH.VABB <- E.onlySSH.VABB %>% filter(VABB.FOS %in% cog_vars_H.FOS) %>% distinct(Loi, .keep_all = TRUE)
 
+# by discipline
 E_VABB_SSH_VABB <- E.onlySSH.VABB %>% 
   group_by(VABB.FOS) %>% 
   summarise(sum = sum(as.double(Fract_count)),
-            jaccard = mean(as.double(jaccard_vabb_npu), na.rm = TRUE)
+            jaccard.mean = mean(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_npu), na.rm = TRUE)
   )
 
-VABB.FOS <- c("SS.total", "H.total", "SSH.total")
+# SS
+E_VABB_SS_VABB <- E.onlySS.VABB %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_npu), na.rm = TRUE)
+  ) %>% 
+  mutate(VABB.FOS = "Social sciences") %>% 
+  select(VABB.FOS, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-sum <- c(sum(as.double(E.onlySS.VABB$Fract_count)),
-         sum(as.double(E.onlyH.VABB$Fract_count)),
-         sum(as.double(E.onlySSH.VABB.distinct$Fract_count)))
+# H
+E_VABB_H_VABB <- E.onlyH.VABB %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_npu), na.rm = TRUE)
+  ) %>% 
+  mutate(VABB.FOS = "Humanities") %>% 
+  select(VABB.FOS, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
+# SSH total
+E_VABB_SSH_VABB.total <- E.onlySSH.VABB.distinct %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_npu), na.rm = TRUE)
+  ) %>% 
+  mutate(VABB.FOS = "Total") %>% 
+  select(VABB.FOS, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-jaccard <- c(mean(as.double(E_VABB_SSH_VABB$jaccard[1:9]), na.rm = TRUE),
-            mean(as.double(E_VABB_SSH_VABB$jaccard[10:14]), na.rm = TRUE),
-           mean(as.double(E_VABB$jaccard_vabb_npu), na.rm = TRUE))
-
-totals.E.VABB.VABB <- data.frame(VABB.FOS, sum, jaccard)
 
 E_VABB_SSH_VABB <- E_VABB_SSH_VABB %>% 
-  rbind(totals.E.VABB.VABB) %>% 
+  rbind(E_VABB_SS_VABB, E_VABB_H_VABB, E_VABB_SSH_VABB.total) %>% 
   mutate(share = sum / sum(as.double(E.onlySSH.VABB.distinct$Fract_count)) * 100)
 
 # Norway 
 
+# by discipline
 E_CRISTIN_SSH_CRISTIN <- E_CRISTIN %>% 
   select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_vabb_npu) %>% 
   group_by(NSD.OECD) %>% 
   summarise(sum = sum(as.double(Fract_count)),
-            jaccard = mean(as.double(jaccard_vabb_npu), na.rm = TRUE)
+            jaccard.mean = mean(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_npu), na.rm = TRUE)
   ) %>% 
   filter(NSD.OECD %in% cog_vars_SSH.FOS)
 
-NSD.OECD <- c("SS.total", "H.total", "SSH.total")
+# SS
+E_CRISTIN_SS_CRISTIN <- E_CRISTIN %>% 
+  filter(NSD.OECD %in% cog_vars_SS.FOS) %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_vabb_npu) %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_npu), na.rm = TRUE)
+  ) %>% 
+  mutate(NSD.OECD = "Social sciences") %>% 
+  select(NSD.OECD, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-sum <- c(sum(E_CRISTIN_SSH_CRISTIN$sum[1:9]),
-         sum(E_CRISTIN_SSH_CRISTIN$sum[10:14]),
-         sum(as.double(E_CRISTIN$Fract_count))
-)
+# H
+E_CRISTIN_H_CRISTIN <- E_CRISTIN %>% 
+  filter(NSD.OECD %in% cog_vars_H.FOS) %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_vabb_npu) %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_npu), na.rm = TRUE)
+  ) %>% 
+  mutate(NSD.OECD = "Humanities") %>% 
+  select(NSD.OECD, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
-jaccard <- c(mean(as.double(E_CRISTIN_SSH_CRISTIN$jaccard[1:9]), na.rm = TRUE),
-            mean(as.double(E_CRISTIN_SSH_CRISTIN$jaccard[10:14]), na.rm = TRUE),
-           mean(as.double(E_CRISTIN$jaccard_vabb_npu), na.rm = TRUE))
-
-totals.C.CRISTIN.CRISTIN <- data.frame(NSD.OECD, sum, jaccard)
-
+# SSH total
+E_CRISTIN_SSH_CRISTIN.total <- E_CRISTIN %>% 
+  filter(NSD.OECD %in% cog_vars_SSH.FOS) %>% 
+  select(VARBEIDLOPENR, NSD.OECD, Fract_count, jaccard_vabb_npu) %>% 
+  summarise(sum = sum(as.double(Fract_count)),
+            jaccard.mean = mean(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.median = median(as.double(jaccard_vabb_npu), na.rm = TRUE),
+            jaccard.sd = sd(as.double(jaccard_vabb_npu), na.rm = TRUE)
+  ) %>% 
+    mutate(NSD.OECD = "Total") %>% 
+    select(NSD.OECD, sum, jaccard.mean, jaccard.median, jaccard.sd)
 
 E_CRISTIN_SSH_CRISTIN <- E_CRISTIN_SSH_CRISTIN %>% 
-  rbind(totals.C.CRISTIN.CRISTIN) %>% 
+  rbind(E_CRISTIN_SS_CRISTIN, E_CRISTIN_H_CRISTIN, E_CRISTIN_SSH_CRISTIN.total) %>% 
   mutate(share = sum / sum(as.double(E_CRISTIN$Fract_count)) * 100)
-
 
 # Appendix 5. Dataset E. Combined -----------------------------------------
 
 # Flanders
 
 E_VABB.combined <- cbind(E_VABB_SSH_VABB, E_VABB_SSH_NSD)
-names(E_VABB.combined) <- c("Discipline", "n.VABB", "jaccard", "share.VABB", "d", "n.CRISTIN", "share.CRISTIN")
+names(E_VABB.combined) <- c("Discipline", "n.VABB", "jaccard.mean", "jaccard.median", "jaccard.sd", "share.VABB", "d", "n.CRISTIN", "share.CRISTIN")
 
 E_VABB.combined <- E_VABB.combined %>% 
-  select(Discipline, n.VABB, n.CRISTIN, share.VABB, share.CRISTIN, jaccard) %>%
+  select(Discipline, n.VABB, n.CRISTIN, share.VABB, share.CRISTIN, jaccard.mean, jaccard.median, jaccard.sd) %>%
   mutate(
     share.difference.VABB = (share.VABB - share.CRISTIN),
     share.difference.CRISTIN = (share.CRISTIN - share.VABB),
     percentage.difference.VABB = ((n.VABB - n.CRISTIN) / ((n.CRISTIN + n.VABB) / 2)) * 100,
     percentage.difference.CRISTIN = ((n.CRISTIN - n.VABB) / ((n.CRISTIN + n.VABB) / 2)) * 100,
-    percentage.error.VABB = ((n.VABB - n.CRISTIN) / n.VABB) * 100,
-    percentage.error.CRISTIN = ((n.CRISTIN - n.VABB) / n.CRISTIN) * 100
+    percentage.error.VABB = ((n.CRISTIN - n.VABB) / n.VABB) * 100,
+    percentage.error.CRISTIN = ((n.VABB - n.CRISTIN) / n.CRISTIN) * 100
   ) %>% 
-  mutate_if(is.numeric, ~ round(., 1))
+  mutate_if(is.numeric, ~ round(., 2))
 
 # Norway
 
 E_CRISTIN.combined <- cbind(E_CRISTIN_SSH_CRISTIN, E_CRISTIN_SSH_VABB)
-names(E_CRISTIN.combined) <- c("Discipline", "n.CRISTIN", "jaccard","share.CRISTIN", "d", "n.VABB", "share.VABB")
+names(E_CRISTIN.combined) <- c("Discipline", "n.CRISTIN", "jaccard.mean", "jaccard.median", "jaccard.sd","share.CRISTIN", "d", "n.VABB", "share.VABB")
 
 E_CRISTIN.combined <- E_CRISTIN.combined %>% 
-  select(Discipline, n.CRISTIN, n.VABB, share.CRISTIN, share.VABB, jaccard) %>%
+  select(Discipline, n.CRISTIN, n.VABB, share.CRISTIN, share.VABB, jaccard.mean, jaccard.median, jaccard.sd) %>%
   mutate(
     share.difference.CRISTIN = (share.CRISTIN - share.VABB),
     share.difference.VABB = (share.VABB - share.CRISTIN),
     percentage.difference.CRISTIN = ((n.CRISTIN - n.VABB) / ((n.VABB + n.CRISTIN) / 2)) * 100,
     percentage.difference.VABB = ((n.VABB - n.CRISTIN) / ((n.VABB + n.CRISTIN) / 2)) * 100,
-    percentage.error.CRISTIN = ((n.CRISTIN - n.VABB) / n.CRISTIN) * 100,
-    percentage.error.VABB = ((n.VABB - n.CRISTIN) / n.VABB) * 100
+    percentage.error.CRISTIN = ((n.VABB - n.CRISTIN) / n.CRISTIN) * 100,
+    percentage.error.VABB = ((n.CRISTIN - n.VABB) / n.VABB) * 100
   ) %>% 
-  mutate_if(is.numeric, ~ round(., 1))
+  mutate_if(is.numeric, ~ round(., 2))
+
 # Not SSH Web of Science --------------------------------------------------
 
 # Flanders
@@ -764,22 +971,52 @@ WOS.notSSH.VABB <- B_VABB %>%
   distinct(Loi, WOS.OECD, .keep_all = TRUE) %>% 
   group_by(WOS.OECD) %>% 
   summarise(sum = sum(as.double(Fract_count))) %>% 
-  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  mutate_if(is.numeric, ~ round(., 2)) %>% 
   arrange(desc(sum)) %>% 
   head(10)
 
+##
+WOS.isSSH.VABB.Lois <- B_VABB %>% 
+  select(Loi, Fract_count, WOS_1:WOS_6) %>% 
+  gather(WOS.nr, WOS.OECD, WOS_1:WOS_6) %>%
+  filter(!is.na(WOS.OECD)) %>% 
+  mutate(is.SSH = WOS.OECD %in% cog_vars_SSH.FOS) %>% 
+  filter(is.SSH == TRUE)
+
+WOS.notSSH.VABB <- B_VABB %>% 
+  select(Loi, Fract_count, WOS_1:WOS_6) %>% 
+  gather(WOS.nr, WOS.OECD, WOS_1:WOS_6) %>%
+  filter(!is.na(WOS.OECD) & !Loi%in% WOS.isSSH.VABB.Lois$Loi) %>% 
+  distinct(Loi, WOS.OECD, .keep_all = TRUE) %>% 
+  group_by(WOS.OECD) %>% 
+  summarise(sum = sum(as.double(Fract_count))) %>% 
+  arrange(desc(sum)) %>% 
+  mutate(total = sum(sum),
+         share = sum / total * 100) %>% 
+  head(10) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
+
 # Norway
+WOS.SSH.ID <- B_CRISTIN %>% 
+  select(VARBEIDLOPENR, Fract_count, WOS_1:WOS_6) %>% 
+  gather(WOS.nr, WOS.OECD, WOS_1:WOS_6) %>% 
+  filter(!is.na(WOS.OECD)) %>% 
+  mutate(is.SSH = WOS.OECD %in% cog_vars_SSH.FOS) %>% 
+  filter(is.SSH == TRUE)
 
 WOS.notSSH.CRISTIN <- B_CRISTIN %>% 
   select(VARBEIDLOPENR, Fract_count, WOS_1:WOS_6) %>% 
   gather(WOS.nr, WOS.OECD, WOS_1:WOS_6) %>% 
-  filter(!WOS.OECD %in% cog_vars_SSH.FOS & !is.na(WOS.OECD)) %>% 
+  filter(!VARBEIDLOPENR %in% WOS.SSH.ID$VARBEIDLOPENR & !is.na(WOS.OECD)) %>% 
   distinct(VARBEIDLOPENR, WOS.OECD, .keep_all = TRUE) %>% 
   group_by(WOS.OECD) %>% 
   summarise(sum = sum(as.double(Fract_count))) %>% 
-  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  mutate_if(is.numeric, ~ round(., 2)) %>% 
   arrange(desc(sum)) %>% 
-  head(10)
+  mutate(total = sum(sum),
+         share = sum / total * 100) %>% 
+  head(10) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
 
 # Not SSH Science-Metrix --------------------------------------------------
 
@@ -791,9 +1028,12 @@ SM.notSSH.VABB <- C_VABB %>%
   distinct(Loi, SM.OECD, .keep_all = TRUE) %>% 
   group_by(SM.OECD) %>% 
   summarise(sum = sum(as.double(Fract_count))) %>% 
-  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  mutate_if(is.numeric, ~ round(., 2)) %>% 
   arrange(desc(sum)) %>% 
-  head(10)
+  mutate(total = sum(sum),
+         share = sum / total * 100) %>% 
+  head(10) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
 
 # Norway
 
@@ -803,9 +1043,12 @@ SM.notSSH.CRISTIN <- C_CRISTIN %>%
   distinct(VARBEIDLOPENR, SM.OECD, .keep_all = TRUE) %>% 
   group_by(SM.OECD) %>% 
   summarise(sum = sum(as.double(Fract_count))) %>% 
-  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  mutate_if(is.numeric, ~ round(., 2)) %>% 
   arrange(desc(sum)) %>% 
-  head(10)
+  mutate(total = sum(sum),
+         share = sum / total * 100) %>% 
+  head(10) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
 
 # Not SSH ERIH PLUS --------------------------------------------------
 
@@ -818,7 +1061,7 @@ ERIH.notSSH.VABB <- D_VABB %>%
   distinct(Loi, erih.OECD, .keep_all = TRUE) %>% 
   group_by(erih.OECD) %>% 
   summarise(sum = sum(as.double(Fract_count))) %>% 
-  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  mutate_if(is.numeric, ~ round(., 2)) %>% 
   arrange(desc(sum)) %>% 
   head(10)
 
@@ -831,7 +1074,7 @@ ERIH.notSSH.CRISTIN <- D_CRISTIN %>%
   distinct(VARBEIDLOPENR, erih.OECD, .keep_all = TRUE) %>% 
   group_by(erih.OECD) %>% 
   summarise(sum = sum(as.double(Fract_count))) %>% 
-  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  mutate_if(is.numeric, ~ round(., 2)) %>% 
   arrange(desc(sum)) %>% 
   head(10)
 
@@ -847,26 +1090,39 @@ NSD.notSSH.VABB <- E_VABB %>%
   distinct(Loi, NSD.OECD, .keep_all = TRUE) %>% 
   group_by(NSD.OECD) %>% 
   summarise(sum = sum(as.double(Fract_count))) %>% 
-  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  mutate_if(is.numeric, ~ round(., 2)) %>% 
   arrange(desc(sum)) %>% 
-  head(10)
+  mutate(total = sum(sum),
+         share = sum / total * 100) %>% 
+  head(10) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
 
 # Norway
+
+VABB.SSH.id <- E_CRISTIN %>% 
+  select(VARBEIDLOPENR, VABB.FOS1:VABB.FOS5, Fract_count) %>% 
+  gather(VABB.FOS_nr, VABB.FOS, VABB.FOS1:VABB.FOS5) %>%
+  filter(!is.na(VABB.FOS)) %>% 
+  mutate(is.SSH = VABB.FOS %in% cog_vars_SSH.FOS) %>% 
+  filter(is.SSH == TRUE)
 
 VABB.notSSH.CRISTIN <- E_CRISTIN %>% 
   select(VARBEIDLOPENR, VABB.FOS1:VABB.FOS5, Fract_count) %>% 
   gather(VABB.FOS_nr, VABB.FOS, VABB.FOS1:VABB.FOS5) %>%
-  filter(!VABB.FOS %in% cog_vars_SSH.FOS & !is.na(VABB.FOS)) %>% 
+  filter(!is.na(VABB.FOS)) %>% 
+  filter(!VARBEIDLOPENR %in% VABB.SSH.id$VARBEIDLOPENR) %>% 
   distinct(VARBEIDLOPENR, VABB.FOS, .keep_all = TRUE) %>% 
   group_by(VABB.FOS) %>% 
   summarise(sum = sum(as.double(Fract_count))) %>% 
-  mutate_if(is.numeric, ~ round(., 1)) %>% 
+  mutate_if(is.numeric, ~ round(., 2)) %>% 
   arrange(desc(sum)) %>% 
   head(10)
 
+# ! does not contain any non-SSH articles
 
 # Not SSH Combined --------------------------------------------------------
 
+# needs to be updated 
 # Flanders
 
 NotSSH.VABB <- cbind(WOS.notSSH.VABB, SM.notSSH.VABB, NSD.notSSH.VABB)
@@ -874,6 +1130,172 @@ NotSSH.VABB <- cbind(WOS.notSSH.VABB, SM.notSSH.VABB, NSD.notSSH.VABB)
 # Norway
 
 NotSSH.CRISTIN <-cbind(WOS.notSSH.CRISTIN, SM.notSSH.CRISTIN, VABB.notSSH.CRISTIN)
+
+
+# Jaccard similarity -- articles ------------------------------------------
+
+jaccard.mean_articles <- cbind(B_VABB.combined["Discipline"], B_VABB.combined["jaccard.mean"],
+                          C_VABB.combined[-1,"jaccard.mean"], D_VABB.combined["jaccard.mean"],
+                          E_VABB.combined["jaccard.mean"], B_CRISTIN.combined["jaccard.mean"],
+                          C_CRISTIN.combined[-1,"jaccard.mean"], D_CRISTIN.combined["jaccard.mean"], E_CRISTIN.combined["jaccard.mean"])
+names(jaccard.mean_articles) <- c("FORD", "VABB-WOS", "VABB-SM", "VABB-ERIH","VABB-NPU",
+                             "NPU-WOS", "NPU-SM", "NPU-ERIH","NPU-VABB")
+
+summary_jaccard.articles_long <- jaccard.mean_articles %>% 
+  gather(pair, mean.jaccard, `VABB-WOS`:`NPU-VABB`) %>% 
+  filter(FORD %in% SSH.codes2)
+
+summary_jaccard.articles_long$FORD <- recode(summary_jaccard.articles_long$FORD, FOS_5_1 = "PSY", FOS_5_2 = "ECON", FOS_5_3 = "EDU", FOS_5_4 = "SOC", FOS_5_5 = "LAW",
+                                             FOS_5_6 = "POL", FOS_5_7 = "GEO", FOS_5_8 = "MEDIA", FOS_5_9 = "OTHS",
+                                             FOS_6_1 = "HIST", FOS_6_2 = "LANG", FOS_6_3 = "PHIL", FOS_6_4 = "ART", FOS_6_5 = "OTHH")
+
+summary_jaccard <- summary_jaccard.articles_long %>% 
+  mutate(
+    level = "article"
+  )
+
+# Jaccard - equivalent assignment ---------------------------------------------------
+
+# Flanders
+
+# total
+Equivalent.assignment_VABB.total <- A_VABB %>%
+  gather(pair, jaccard, jaccard_vabb_wos:jaccard_vabb_erih) %>% 
+  select(Loi, pair, jaccard) %>% 
+  filter(!is.na(jaccard)) %>% 
+  mutate(equivalent = jaccard == "1") %>% 
+  group_by(equivalent, pair) %>% 
+  count() %>% 
+  group_by(pair) %>%
+  mutate(total = sum(n)) %>% 
+  ungroup() %>% 
+  mutate(share = n / total) %>% 
+  filter(equivalent == TRUE) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
+
+# SS
+Equivalent.assignment_VABB.SS  <- A_VABB %>%
+  gather(VABB.nr, VABB, VABB.FOS1:VABB.FOS5) %>% 
+  filter(VABB %in% cog_vars_SS.FOS) %>% 
+  distinct(Loi, .keep_all = TRUE) %>% 
+  gather(pair, jaccard, jaccard_vabb_wos:jaccard_vabb_erih) %>% 
+  select(pair, jaccard) %>% 
+  filter(!is.na(jaccard)) %>% 
+  mutate(equivalent = jaccard == 1) %>% 
+  group_by(equivalent, pair) %>% 
+  count() %>% 
+  group_by(pair) %>%
+  mutate(total = sum(n)) %>% 
+  ungroup() %>% 
+  mutate(share = round(n / total, digits = 2)) %>% 
+  filter(equivalent == TRUE) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
+
+# H
+Equivalent.assignment_VABB.H  <- A_VABB %>%
+  gather(VABB.nr, VABB, VABB.FOS1:VABB.FOS5) %>% 
+  filter(VABB %in% cog_vars_H.FOS) %>% 
+  distinct(Loi, .keep_all = TRUE) %>% 
+  gather(pair, jaccard, jaccard_vabb_wos:jaccard_vabb_erih) %>% 
+  select(pair, jaccard) %>% 
+  filter(!is.na(jaccard)) %>% 
+  mutate(equivalent = jaccard == 1) %>% 
+  group_by(equivalent, pair) %>% 
+  count() %>% 
+  group_by(pair) %>%
+  mutate(total = sum(n)) %>% 
+  ungroup() %>% 
+  mutate(share = round(n / total, digits = 2)) %>% 
+  filter(equivalent == TRUE) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
+
+# By discipline
+Equivalent.assignment_VABB <- A_VABB %>%
+  gather(VABB.nr, VABB, VABB.FOS1:VABB.FOS5) %>% 
+  filter(VABB %in% cog_vars_SSH.FOS) %>% 
+  distinct(Loi, .keep_all = TRUE) %>% 
+  gather(pair, jaccard, jaccard_vabb_wos:jaccard_vabb_erih) %>% 
+  #select(Loi, pair, jaccard) %>% 
+  filter(!is.na(jaccard)) %>% 
+  mutate(equivalent = jaccard == "1") %>% 
+  group_by(VABB, equivalent, pair) %>% 
+  count() %>% 
+  group_by(pair, VABB) %>%
+  mutate(total = sum(n)) %>% 
+  ungroup() %>% 
+  mutate(share = n / total) %>% 
+  filter(equivalent == TRUE) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
+
+#Norway
+
+# Total SSH
+Equivalent.assignment_CRISTIN.total <- A_CRISTIN %>%
+  gather(pair, jaccard, jaccard_npu_wos:jaccard_npu_erih) %>% 
+  select(VARBEIDLOPENR, pair, jaccard) %>% 
+  filter(!is.na(jaccard)) %>% 
+  mutate(equivalent = jaccard == "1") %>% 
+  group_by(equivalent, pair) %>% 
+  count() %>% 
+  group_by(pair) %>%
+  mutate(total = sum(n)) %>% 
+  ungroup() %>% 
+  mutate(share = n / total) %>% 
+  filter(equivalent == TRUE) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
+
+# SS
+Equivalent.assignment_CRISTIN.SS <- A_CRISTIN %>%
+  filter(NSD.OECD %in% cog_vars_SS.FOS) %>% 
+  distinct(VARBEIDLOPENR, .keep_all = TRUE) %>% 
+  gather(pair, jaccard, jaccard_npu_wos:jaccard_npu_erih) %>% 
+  select(VARBEIDLOPENR, pair, jaccard) %>% 
+  filter(!is.na(jaccard)) %>% 
+  mutate(equivalent = jaccard == "1") %>% 
+  group_by(equivalent, pair) %>% 
+  count() %>% 
+  group_by(pair) %>%
+  mutate(total = sum(n)) %>% 
+  ungroup() %>% 
+  mutate(share = n / total) %>% 
+  filter(equivalent == TRUE) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
+
+# H
+Equivalent.assignment_CRISTIN.H <- A_CRISTIN %>%
+  filter(NSD.OECD %in% cog_vars_H.FOS) %>% 
+  distinct(VARBEIDLOPENR, .keep_all = TRUE) %>% 
+  gather(pair, jaccard, jaccard_npu_wos:jaccard_npu_erih) %>% 
+  select(VARBEIDLOPENR, pair, jaccard) %>% 
+  filter(!is.na(jaccard)) %>% 
+  mutate(equivalent = jaccard == "1") %>% 
+  group_by(equivalent, pair) %>% 
+  count() %>% 
+  group_by(pair) %>%
+  mutate(total = sum(n)) %>% 
+  ungroup() %>% 
+  mutate(share = n / total) %>% 
+  filter(equivalent == TRUE) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
+
+# By discipline
+Equivalent.assignment_CRISTIN <- A_CRISTIN %>%
+  distinct(VARBEIDLOPENR, .keep_all = TRUE) %>% 
+  gather(pair, jaccard, jaccard_npu_wos:jaccard_npu_erih) %>% 
+  select(VARBEIDLOPENR, NSD.OECD, pair, jaccard) %>% 
+  filter(!is.na(jaccard)) %>% 
+  mutate(equivalent = jaccard == "1") %>% 
+  group_by(NSD.OECD, equivalent, pair) %>% 
+  count() %>% 
+  group_by(NSD.OECD, pair) %>%
+  mutate(total = sum(n)) %>% 
+  ungroup() %>% 
+  mutate(share = n / total) %>% 
+  filter(equivalent == TRUE) %>% 
+  mutate_if(is.numeric, ~ round(., 2))
+
+
+#Equivalent.assignment_articles <- rbind(Equivalent.assignment_CRISTIN, Equivalent.assignment_VABB)
 
 # Export data -------------------------------------------------------------
 
@@ -892,6 +1314,9 @@ csvFileName_10 <- paste0("./Output/NORWAY_D_", currentDate, ".csv")
 csvFileName_11 <- paste0("./Output/NORWAY_E_", currentDate, ".csv")
 csvFileName_12 <- paste0("./Output/NORWAY_NOTSSH_", currentDate, ".csv")
 
+csvFileName_13 <- paste0("./Output/equivalent_assigment_articles_", currentDate, ".csv")
+csvFileName_14 <- paste0("./Output/jaccard_articles_", currentDate, ".csv")
+
 write_csv(A_VABB_SSH, csvFileName_1, na = "")
 write_csv(A_CRISTIN_SSH, csvFileName_7, na = "")
 
@@ -909,3 +1334,6 @@ write_csv(E_CRISTIN.combined, csvFileName_11, na = "")
 
 write_csv(NotSSH.VABB, csvFileName_6, na = "")
 write_csv(NotSSH.CRISTIN, csvFileName_12, na = "")
+
+write_csv(Equivalent.assignment_articles, csvFileName_13, na = "")
+write_csv(summary_jaccard, csvFileName_14, na = "")
