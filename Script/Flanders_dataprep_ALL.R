@@ -53,7 +53,7 @@ FLANDERS_MANUALPAIRS <- read_csv2("./Raw data/Web of Science - matching/FLANDERS
 WOSdata <- read_csv("./Raw data/Web of Science - online/WOSdata_17012019.csv",
                     col_types = cols(.default = "c")) # WoS data retrieved online using WoS ID
 
-FL_Jaccard <- read_csv("./Raw data/Jaccard calculation/VL_Jaccard.csv")
+FL_Jaccard <- read_csv("./Raw data/Jaccard calculation/VL_Jaccard20200819.csv")
 
 # Prep VABB data ----------------------------------------------------------
 
@@ -516,8 +516,23 @@ FLANDERSdataMINI.v2$title_matchCHECK <- ifelse(!is.na(FLANDERSdataMINI.v2$title_
                                                       FALSE),
                                                NA) # this validates the matched title with year and page numbers
 
+FLANDERSdataMINI.v2$title_matchCHECK2 <- ifelse(!is.na(FLANDERSdataMINI.v2$title_match), 
+                                               ifelse(FLANDERSdataMINI.v2$pubyear == FLANDERSdataWOS$PUBJAAR[match(FLANDERSdataMINI.v2$title_match, FLANDERSdataWOS$PUBID)],
+                                                      ifelse(FLANDERSdataMINI.v2$bp_CLEANED == FLANDERSdataWOS$bp_CLEANED[match(FLANDERSdataMINI.v2$title_match, FLANDERSdataWOS$PUBID)],
+                                                             ifelse(FLANDERSdataMINI.v2$ep_CLEANED == FLANDERSdataWOS$ep_CLEANED[match(FLANDERSdataMINI.v2$title_match, FLANDERSdataWOS$PUBID)],
+                                                                    ifelse((FLANDERSdataMINI.v2$ISSN1 == FLANDERSdataWOS$ISSN[match(FLANDERSdataMINI.v2$title_match, FLANDERSdataWOS$PUBID)])|
+                                                                             FLANDERSdataMINI.v2$ISSN2 == FLANDERSdataWOS$ISSN[match(FLANDERSdataMINI.v2$title_match, FLANDERSdataWOS$PUBID)]|
+                                                                             FLANDERSdataMINI.v2$ISSN3 == FLANDERSdataWOS$ISSN[match(FLANDERSdataMINI.v2$title_match, FLANDERSdataWOS$PUBID)]|
+                                                                             FLANDERSdataMINI.v2$ISSN4 == FLANDERSdataWOS$ISSN[match(FLANDERSdataMINI.v2$title_match, FLANDERSdataWOS$PUBID)],
+                                                                    TRUE, FALSE),
+                                                             FALSE),
+                                                      FALSE),
+                                                      FALSE),
+                                               NA) # this validates the matched title with year and page numbers and ISSN 
+
 #(2) LSH rule 1 ## rule1.ID == "YES"
 test.rule1 <- FLANDERSdataMINI.v2 %>% 
+  #filter(title_matchCHECK == FALSE | is.na(title_matchCHECK)) %>% 
   filter(jaccard >= 0.75 & (check.year >= -2 & check.year <= 1) & (check.bp == 0|check.ep == 0))
 
 FLANDERSdataMINI.v2 <- FLANDERSdataMINI.v2 %>% 
@@ -527,6 +542,7 @@ FLANDERSdataMINI.v2 <- FLANDERSdataMINI.v2 %>%
 
 #(3) LSH rule 2 rule2.ID == "YES"
 test.rule2 <- FLANDERSdataMINI.v2 %>% 
+  #filter((title_matchCHECK == FALSE | is.na(title_matchCHECK)) & rule1.ID  == "NO") %>% 
   filter(jaccard >= 0.30 & (check.year >= -2 & check.year <= 1) & (check.bp == 0|check.ep == 0) &
            (check.ISSN_1 == 0|check.ISSN_2==0|check.ISSN_3==0|check.ISSN_4==0|check.ISSN_5==0
             |check.ISSN_6==0|check.ISSN_7==0|check.ISSN_8==0|check.ISSN_9==0|check.ISSN_10==0|check.ISSN_11==0|
@@ -540,6 +556,7 @@ FLANDERSdataMINI.v2 <- FLANDERSdataMINI.v2 %>%
 
 #(4) LSH rule 3 rule3.ID == "YES"
 test.rule3 <- FLANDERSdataMINI.v2 %>% 
+  #filter((title_matchCHECK == FALSE | is.na(title_matchCHECK)) & rule1.ID  == "NO" & rule2.ID == "NO") %>% 
   filter(jaccard >= 0.65 & (check.year >= -2 & check.year <= 1) &
            (check.ISSN_1 == 0|check.ISSN_2==0|check.ISSN_3==0|check.ISSN_4==0|check.ISSN_5==0
             |check.ISSN_6==0|check.ISSN_7==0|check.ISSN_8==0|check.ISSN_9==0|check.ISSN_10==0|check.ISSN_11==0|
