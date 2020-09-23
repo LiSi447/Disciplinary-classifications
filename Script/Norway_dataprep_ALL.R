@@ -39,7 +39,7 @@ All_journals <- read_csv("./Raw data/Alljournals_09072019_CLEANED.csv", # journa
 
 erih <- read_csv2("./Raw data/ERIH PLUS/2020-04-03 ERIH PLUS approved journals and series.csv")
 
-NO_Jaccard <- read_csv("./Raw data/Jaccard calculation/NO_Jaccard.csv")
+NO_Jaccard <- read_csv("./Raw data/Jaccard calculation/NO_Jaccard20200819.csv")
 
 # prep CRISTIN data -------------------------------------------------------
 
@@ -315,6 +315,7 @@ NORWAYdataMINI.v2$title_matchCHECK <- ifelse(!is.na(NORWAYdataMINI.v2$title_matc
                                              NA)
 #rule 1 rule1.ID == "YES"
 test.rule1 <- NORWAYdataMINI.v2 %>% 
+  #filter(title_matchCHECK == FALSE | is.na(title_matchCHECK)) %>% 
   filter(jaccard >= 0.75 & (check.year >= -2 & check.year <= 1) & (check.bp == 0|check.ep == 0))
 NORWAYdataMINI.v2 <- NORWAYdataMINI.v2 %>% 
   mutate(
@@ -323,6 +324,8 @@ NORWAYdataMINI.v2 <- NORWAYdataMINI.v2 %>%
 
 #rule 2 rule2.ID == "YES"
 test.rule2 <- NORWAYdataMINI.v2 %>% 
+  #filter((title_matchCHECK == FALSE | is.na(title_matchCHECK))
+        # & rule1.ID == "NO") %>% 
   filter(jaccard >= 0.30 & (check.year >= -2 & check.year <= 1) & (check.bp == 0|check.ep == 0) &
            (check.ISSN_1 == 0|check.ISSN_2==0|check.ISSN_3==0|check.ISSN_4==0|check.ISSN_5==0
             |check.ISSN_6==0) &
@@ -334,6 +337,8 @@ NORWAYdataMINI.v2 <- NORWAYdataMINI.v2 %>%
 
 #rule 3 rule3.ID == "YES"
 test.rule3 <- NORWAYdataMINI.v2 %>% 
+  #filter((title_matchCHECK == FALSE | is.na(title_matchCHECK))
+  # & rule1.ID == "NO" & rule2.ID == "NO") %>%  
   filter(jaccard >= 0.65 & (check.year >= -2 & check.year <= 1) &
            (check.ISSN_1 == 0|check.ISSN_2==0|check.ISSN_3==0|check.ISSN_4==0|check.ISSN_5==0
             |check.ISSN_6==0))
@@ -478,7 +483,7 @@ CRISTINdata.13 <- left_join(CRISTINdata.12, NO_Jaccard, by = "VARBEIDLOPENR")
 currentDate <- Sys.Date()
 
 csvFileName_1 <- paste0("./Output/NORWAY_", currentDate, ".csv")
-csvFileName_1 <- paste0("./Output/NORWAY_articles_", currentDate, ".csv")
+csvFileName_2 <- paste0("./Output/NORWAY_articles_", currentDate, ".csv")
 
 write_csv(CRISTINdata.13, csvFileName_1, na = "")
-write_csv(CRISTINdata.jaccard, csvFileName_1, na = "")
+write_csv(CRISTINdata.jaccard, csvFileName_2, na = "")
