@@ -17,15 +17,13 @@ CRISTINdata <- read_csv("./Output/NORWAY_2020-08-24.csv", col_types = cols(.defa
 SSH.codes <- c(paste0("FORD_5_",1:9), paste0("FORD_6_",1:5))
 SSH.codes2 <- c(paste0("FOS_5_",1:9), paste0("FOS_6_",1:5))
 
-jaccard <- rbind(jaccard_articles, jaccard_journals)
-
 # Define theme
 
 theme_academic_ls <- function() {
   theme_classic() +
     theme(
       legend.position = "none",
-      text = element_text(family = "Times New Roman"),
+      text = element_text(family = "Times"),
       axis.line.y = element_blank(),
       axis.line.x = element_line(color = "grey70"),
       axis.text = element_text(size = 10),
@@ -42,30 +40,10 @@ currentDate <- Sys.Date()
 
 # Define colors
 
-
-palette <- distinctColorPalette(14)
-
-col_vector2 <- c("#670018",
-                 "#e7d660",
-                 "#0160ca",
-                 "#5a7800",
-                 "#cd82fa",
-                 "#ffa656",
-                 "#67006c",
-                 "#ff796d",
-                 "#343f7e",
-                 "#9b0023",
-                 "#e49eff",
-                 "#632b00",
-                 "#f851a0",
-                 "#cd1652")
-
-col_vector<-c('#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000')
-
-# extend palette
-palette.Dark2 <- brewer.pal(8, "Set1")
-Dark2.range <- colorRampPalette(palette.Dark2)
-
+col_vector <- c("#0E405B", "#F79889", "#0E5E5E", "#D32D45","#CDEDF6",
+                "#F42A56", "#257E93", "#F98296", "#F4E5D7",
+                "#AF756E", "#1B174F", "#0E776A", "#4DC7E8", "#4796A8",
+                '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231')
 
 # Prep  data - FLANDERS -------------------------------------------------------
 
@@ -203,15 +181,22 @@ CRISTINdata_foralluvial.VABB <- CRISTINdata %>%
 
 # Generate alluvials for VABB ---------------------------------------------
 
-#WOS 
+#WOS
+
+VABBdata_foralluvial.WOS %>% filter(sum > 75) %>% count(VABB.FOS) # 9 and 14 missing
+
 VABB_B <- VABBdata_foralluvial.WOS %>% 
+  #arrange(desc(sum)) %>% 
+  #group_by(VABB.FOS) %>% 
+  #slice(1:3) %>% 
+  #ungroup() %>% 
   filter(sum > 75) %>% 
   ggplot(aes(axis1 = VABB.FOS, axis2 = WOS, y = sum)) +
   geom_alluvium(aes(fill = VABB.FOS), width = 1/10, alpha = 0.5) +
   geom_stratum(alpha = 0.8, width = 1/10, color = "grey50", size = 0.01) +
   #geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
   ggrepel::geom_text_repel(stat = "stratum", aes(label = after_stat(stratum)),
-                           size = 1.5, family = "Times New Roman",
+                           size = 1.5, family = "Times",
                            segment.colour = "black",
                            segment.size = 0.1,
                            direction ="x",
@@ -226,9 +211,12 @@ VABB_B <- VABBdata_foralluvial.WOS %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank()
   ) +
-  scale_fill_manual(values = col_vector)
+  scale_fill_manual(values = col_vector[c(-9, -14)])
 
 #SM
+
+VABBdata_foralluvial.SM %>% filter(sum > 75) %>% count(VABB.FOS) # 9 and 13, 14 missing
+
 VABB_C <- VABBdata_foralluvial.SM %>% 
   filter(sum > 75) %>% 
   ggplot(aes(axis1 = VABB.FOS, axis2 = SM.OECD, y = sum)) +
@@ -236,7 +224,7 @@ VABB_C <- VABBdata_foralluvial.SM %>%
   geom_stratum(alpha = 0.8, width = 1/10, color = "grey50", size = 0.01) +
   #geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
   ggrepel::geom_text_repel(stat = "stratum", aes(label = after_stat(stratum)),
-                           size = 1.5, family = "Times New Roman",
+                           size = 1.5, family = "Times",
                            segment.colour = "black",
                            segment.size = 0.1,
                            direction ="x",
@@ -251,9 +239,12 @@ VABB_C <- VABBdata_foralluvial.SM %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank()
   ) +
-  scale_fill_manual(values = col_vector)
+  scale_fill_manual(values = col_vector[c(-9, -13, -14)])
 
 #ERIH 
+
+VABBdata_foralluvial.ERIH %>% filter(sum > 75) %>% count(VABB.FOS) # 9 and 14 missing
+
 VABB_D <- VABBdata_foralluvial.ERIH %>% 
   filter(sum > 75) %>% 
   ggplot(aes(axis1 = VABB.FOS, axis2 = ERIH, y = sum)) +
@@ -261,7 +252,7 @@ VABB_D <- VABBdata_foralluvial.ERIH %>%
   geom_stratum(alpha = 0.8, width = 1/10, color = "grey50", size = 0.01) +
   #geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
   ggrepel::geom_text_repel(stat = "stratum", aes(label = after_stat(stratum)),
-                           size = 1.5, family = "Times New Roman",
+                           size = 1.5, family = "Times",
                            segment.colour = "black",
                            segment.size = 0.1,
                            direction ="x",
@@ -276,9 +267,12 @@ VABB_D <- VABBdata_foralluvial.ERIH %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank()
   ) +
-  scale_fill_manual(values = col_vector)
+  scale_fill_manual(values = col_vector[c(-9, -14)])
 
 #NPU 
+
+VABBdata_foralluvial.NPU %>% filter(sum > 75) %>% count(VABB.FOS) # 9 and 14 missing
+
 VABB_E <- VABBdata_foralluvial.NPU %>% 
   filter(sum > 75) %>% 
   ggplot(aes(axis1 = VABB.FOS, axis2 = NSD.OECD, y = sum)) +
@@ -286,7 +280,7 @@ VABB_E <- VABBdata_foralluvial.NPU %>%
   geom_stratum(alpha = 0.8, width = 1/10, color = "grey50", size = 0.01) +
   #geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
   ggrepel::geom_text_repel(stat = "stratum", aes(label = after_stat(stratum)),
-                           size = 1.5, family = "Times New Roman",
+                           size = 1.5, family = "Times",
                            segment.colour = "black",
                            segment.size = 0.1,
                            direction ="x",
@@ -301,12 +295,15 @@ VABB_E <- VABBdata_foralluvial.NPU %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank()
   ) +
-  scale_fill_manual(values = col_vector)
+  scale_fill_manual(values = col_vector[c(-9, -14)])
 
 
 # Generate alluvials for CRISTIN ------------------------------------------
 
 #WOS 
+
+CRISTINdata_foralluvial.WOS %>% filter(sum > 75) %>% count(NSD.OECD) # 14 missing
+
 CRISTIN_B <- CRISTINdata_foralluvial.WOS %>% 
   filter(sum > 75) %>% 
   ggplot(aes(axis1 = NSD.OECD, axis2 = WOS, y = sum)) +
@@ -314,7 +311,7 @@ CRISTIN_B <- CRISTINdata_foralluvial.WOS %>%
   geom_stratum(alpha = 0.8, width = 1/10, color = "grey50", size = 0.01) +
   #geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
   ggrepel::geom_text_repel(stat = "stratum", aes(label = after_stat(stratum)),
-                           size = 1.5, family = "Times New Roman",
+                           size = 1.5, family = "Times",
                            segment.colour = "black",
                            segment.size = 0.1,
                            direction ="x",
@@ -329,9 +326,12 @@ CRISTIN_B <- CRISTINdata_foralluvial.WOS %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank()
   ) +
-  scale_fill_manual(values = col_vector)
+  scale_fill_manual(values = col_vector[-14])
 
-#SM 
+#SM
+
+CRISTINdata_foralluvial.SM %>% filter(sum > 75) %>% count(NSD.OECD) # 13 and 14 missing
+
 CRISTIN_C <- CRISTINdata_foralluvial.SM %>% 
   filter(sum > 75) %>% 
   ggplot(aes(axis1 = NSD.OECD, axis2 = SM.OECD, y = sum)) +
@@ -339,7 +339,7 @@ CRISTIN_C <- CRISTINdata_foralluvial.SM %>%
   geom_stratum(alpha = 0.8, width = 1/10, color = "grey50", size = 0.01) +
   #geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
   ggrepel::geom_text_repel(stat = "stratum", aes(label = after_stat(stratum)),
-                           size = 1.5, family = "Times New Roman",
+                           size = 1.5, family = "Times",
                            segment.colour = "black",
                            segment.size = 0.1,
                            direction ="x",
@@ -354,9 +354,12 @@ CRISTIN_C <- CRISTINdata_foralluvial.SM %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank()
   ) +
-  scale_fill_manual(values = col_vector)
+  scale_fill_manual(values = col_vector[c(-13, -14)])
 
 #ERIH
+
+CRISTINdata_foralluvial.ERIH %>% filter(sum > 75) %>% count(NSD.OECD) # 7, 9, 14 missing
+
 CRISTIN_D <- CRISTINdata_foralluvial.ERIH %>% 
   filter(sum > 75) %>% 
   ggplot(aes(axis1 = NSD.OECD, axis2 = ERIH, y = sum)) +
@@ -364,7 +367,7 @@ CRISTIN_D <- CRISTINdata_foralluvial.ERIH %>%
   geom_stratum(alpha = 0.8, width = 1/10, color = "grey50", size = 0.01) +
   #geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
   ggrepel::geom_text_repel(stat = "stratum", aes(label = after_stat(stratum)),
-                           size = 1.5, family = "Times New Roman",
+                           size = 1.5, family = "Times",
                            segment.colour = "black",
                            segment.size = 0.1,
                            direction ="x",
@@ -379,10 +382,13 @@ CRISTIN_D <- CRISTINdata_foralluvial.ERIH %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank()
   ) +
-  scale_fill_manual(values = col_vector)
+  scale_fill_manual(values = col_vector[c(-7,  -9, -14)])
 
 
 #VABB
+
+CRISTINdata_foralluvial.VABB %>% filter(sum > 75) %>% count(NSD.OECD) # 14 missing
+
 CRISTIN_E <- CRISTINdata_foralluvial.VABB %>% 
   filter(sum > 75 & VABB != "MED") %>% 
   ggplot(aes(axis1 = NSD.OECD, axis2 = VABB, y = sum)) +
@@ -390,7 +396,7 @@ CRISTIN_E <- CRISTINdata_foralluvial.VABB %>%
   geom_stratum(alpha = 0.8, width = 1/10, color = "grey50", size = 0.01) +
   #geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
   ggrepel::geom_text_repel(stat = "stratum", aes(label = after_stat(stratum)),
-                           size = 1.5, family = "Times New Roman",
+                           size = 1.5, family = "Times",
                            segment.colour = "black",
                            segment.size = 0.1,
                            direction ="x",
@@ -405,7 +411,7 @@ CRISTIN_E <- CRISTINdata_foralluvial.VABB %>%
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank()
   ) +
-  scale_fill_manual(values = col_vector)
+  scale_fill_manual(values = col_vector[-14])
 
 
 # Combine plots -----------------------------------------------------------
@@ -433,6 +439,10 @@ plot3 <- grid.arrange(VABB_B, CRISTIN_B,
 ggsave(paste0("alluvials_3_", currentDate, ".png"), plot3 , "png", here::here("Plots"),
        width = 17, height = 16, units = "cm", dpi = 600 )
 
+ggsave(paste0("alluvials_3_", currentDate, ".pdf"), plot3 , "pdf", here::here("Plots"),
+       width = 17, height = 16, units = "cm", dpi = 600 )
+
+
 
 plot4 <- grid.arrange(VABB_C, CRISTIN_C, 
                       VABB_E, CRISTIN_E,
@@ -441,44 +451,3 @@ plot4 <- grid.arrange(VABB_C, CRISTIN_C,
 ggsave(paste0("alluvials_4_", currentDate, ".png"), plot4 , "png", here::here("Plots"),
        width = 17, height = 16, units = "cm", dpi = 600 )
 
-
-# In progress -------------------------------------------------------------
-
- 
-###
-
-ggrepel::geom_text_repel(data = filter(jaccard.by.database, pair == "WOS"), aes(label = FORD),
-                         size = 1.5, family = "Times New Roman",
-                         segment.size = 0.2,
-                         segment.alpha = 0.5,
-                         nudge_x = -0.35,
-                         direction ="x",
-                         hjust = 1) +
-  
-  
-  
-  #... to continue ...
-  
-  
-  ## ERROR
-  # below should not be the correct format!
-  VABBdata_WOS2 <- VABBdata %>% 
-  select(Loi, VABB.FOS1:VABB.FOS5, WOS_1:WOS_6, Fract_count) %>% 
-  gather(VABB.FOS_nr, VABB.FOS, VABB.FOS1:VABB.FOS5) %>% 
-  gather(WOS_nr, WOS, WOS_1:WOS_6) %>% 
-  filter(!is.na(WOS) & !is.na(VABB.FOS))
-
-is_alluvia_form(VABBdata_WOS2, axis = c(VABB.FOS, WOS))  # TRUE
-# error: Missing alluvia for some stratum combinations.
-
-VABBdata_WOS2 %>% 
-  filter(VABB.FOS %in% SSH.codes2) %>% 
-  ggplot(aes(weight = Fract_count, axis1 = as.factor(VABB.FOS), axis2 = as.factor(WOS))) +
-  geom_alluvium(aes(fill = VABB.FOS), width = 1/12, alpha = 0.8, discern = TRUE) +
-  geom_stratum(width = 1/50, colour = "black", alpha = 0, discern = TRUE) +
-  scale_x_continuous(breaks = 1:2, labels = c("VABB classification", "Web of Science")) +
-  ggrepel::geom_text_repel(aes(label = WOS), stat = "stratum", label.strata = TRUE, size = 3, direction ="x", nudge_x = +.5) +
-  ggrepel::geom_text_repel(aes(label = VABB.FOS), stat = "stratum", label.strata = TRUE, size = 3, direction ="x", nudge_x = -.5) +
-  scale_fill_manual(values = Dark2.range(14))
-
-## END OF EXAMPLE OF AN ERROR
