@@ -451,3 +451,5 @@ plot4 <- grid.arrange(VABB_C, CRISTIN_C,
 ggsave(paste0("alluvials_4_", currentDate, ".png"), plot4 , "png", here::here("Plots"),
        width = 17, height = 16, units = "cm", dpi = 600 )
 
+ggsave(paste0("alluvials_4_", currentDate, ".pdf"), plot4 , "pdf", here::here("Plots"),
+       width = 17, height = 16, units = "cm", dpi = 600 )
