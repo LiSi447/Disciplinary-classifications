@@ -7,6 +7,8 @@ library(readxl)
 
 VABBdata <- read_csv("./Output/FLANDERS_2020-08-24.csv", col_types = cols(.default = "c"))
 WOS.info <- read_excel("./Manually cleaned data/BE_WOSVABB_MANUAL_08112018.xlsx" , sheet = "VABB-1")
+FLANDERSdataWOS <- read_csv("./Raw data/Web of Science - KUL/Belgium_201807232032.csv",
+                            col_types = cols(.default = "c")) # WoS data on Belgium retrieved from the KUL database
 
 
 # Check accuracy ----------------------------------------------------------
@@ -51,10 +53,18 @@ VABBdata.inWOS <- VABBdata  %>%
 VABBdata$WOS.notes <- WOS.info$NOTES[match(VABBdata$Loi, WOS.info$Loi)]
 
 VABBdata.unidentified <- VABBdata %>% 
-  filter((in.WOS.bof == "YES") & 
-           (indexed.WOS_FIN == FALSE | is.na(indexed.WOS_FIN))) %>% 
+  filter(in.WOS.bof == "YES" & is.na(indexed.WOS_FIN)) %>% 
   #filter((in.WOS.bof == "YES" | is.wosID == TRUE) & 
           #(indexed.WOS_FIN == FALSE | is.na(indexed.WOS_FIN))) %>% 
   select(Loi, in.WOS.bof, is.wosID, indexed.WOS_FIN, WOS.notes) %>% 
   group_by(WOS.notes) %>% 
   count()
+
+# Select records that were not identified and that have no notes
+
+VABBdata.nonotes <- VABBdata %>% 
+  filter(in.WOS.bof == "YES" & is.na(indexed.WOS_FIN) & (is.na(WOS.notes) | WOS.notes == "TODO"))
+
+WOS.missed <- FLANDERSdataWOS %>% filter(PUBID %in% VABBdata.nonotes$isi.x)
+
+# checked manually  on 25/09/2020, 4 likely due to language and 10 due to metadata errors (? could it be that either WOS or VABB data were not changed to lowercase?).
